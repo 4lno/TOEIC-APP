@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.luudev.vocalens.R
 import com.luudev.vocalens.presentation.components.BrandHeader
+import com.luudev.vocalens.presentation.components.messageResource
 import com.luudev.vocalens.presentation.theme.VocaLensTheme
 
 private val LoginBlue = Color(0xFF2560EF)
@@ -51,12 +52,12 @@ fun LoginScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
-    val noticeText = uiState.notice?.let {
+    val noticeText = uiState.error?.let { stringResource(it.messageResource()) } ?: uiState.notice?.let {
         stringResource(when (it) {
-            LoginNotice.PasswordResetUnavailable -> R.string.login_reset_unavailable
+            LoginNotice.PasswordResetSent -> R.string.auth_reset_sent
         })
     }
-    LaunchedEffect(uiState.notice) {
+    LaunchedEffect(uiState.notice, uiState.error) {
         if (noticeText != null) {
             snackbarHostState.showSnackbar(noticeText)
             onNoticeDismissed()
@@ -90,6 +91,7 @@ fun LoginScreen(
                     Spacer(Modifier.height(7.dp))
                     OutlinedTextField(
                         value = uiState.email,
+                        enabled = !uiState.isLoading,
                         onValueChange = onEmailChange,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { FieldHint(stringResource(R.string.login_email_hint)) },
@@ -109,6 +111,7 @@ fun LoginScreen(
                     Spacer(Modifier.height(7.dp))
                     OutlinedTextField(
                         value = uiState.password,
+                        enabled = !uiState.isLoading,
                         onValueChange = onPasswordChange,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { FieldHint(stringResource(R.string.login_password_hint)) },
@@ -136,6 +139,7 @@ fun LoginScreen(
                         keyboardActions = KeyboardActions(onDone = { submit() })
                     )
                     TextButton(onClick = onForgotPasswordClick,
+                        enabled = !uiState.isLoading,
                         modifier = Modifier.align(Alignment.End),
                         contentPadding = PaddingValues(start = 12.dp)) {
                         Text(stringResource(R.string.login_forgot_password), color = LoginBlue,
@@ -143,6 +147,7 @@ fun LoginScreen(
                     }
                     Button(
                         onClick = submit,
+                        enabled = !uiState.isLoading,
                         modifier = Modifier.fillMaxWidth().height(54.dp)
                             .shadow(14.dp, RoundedCornerShape(16.dp),
                                 ambientColor = LoginBlue.copy(alpha = 0.25f),
@@ -150,7 +155,7 @@ fun LoginScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LoginBlue)
                     ) {
-                        Text(stringResource(R.string.login_submit), color = Color.White,
+                        Text(stringResource(if (uiState.isLoading) R.string.auth_processing else R.string.login_submit), color = Color.White,
                             fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
@@ -159,6 +164,7 @@ fun LoginScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.login_no_account), color = LoginMuted, fontSize = 12.sp)
                     TextButton(onClick = onRegisterClick,
+                        enabled = !uiState.isLoading,
                         contentPadding = PaddingValues(horizontal = 5.dp)) {
                         Text(stringResource(R.string.login_register), color = LoginBlue,
                             fontWeight = FontWeight.Bold, fontSize = 12.sp)

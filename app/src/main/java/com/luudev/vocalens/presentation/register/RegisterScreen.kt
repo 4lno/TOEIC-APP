@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.luudev.vocalens.R
 import com.luudev.vocalens.presentation.components.BrandHeader
+import com.luudev.vocalens.presentation.components.messageResource
 import com.luudev.vocalens.presentation.components.FormGlyph
 import com.luudev.vocalens.presentation.components.FormIcon
 import com.luudev.vocalens.presentation.theme.VocaLensTheme
@@ -54,10 +55,10 @@ fun RegisterScreen(
 ) {
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val unavailableMessage = stringResource(R.string.register_service_unavailable)
-    LaunchedEffect(uiState.showServiceUnavailable) {
-        if (uiState.showServiceUnavailable) {
-            snackbarHostState.showSnackbar(unavailableMessage)
+    val errorMessage = uiState.error?.let { stringResource(it.messageResource()) }
+    LaunchedEffect(uiState.error) {
+        if (errorMessage != null) {
+            snackbarHostState.showSnackbar(errorMessage)
             onNoticeDismissed()
         }
     }
@@ -85,12 +86,14 @@ fun RegisterScreen(
                 Spacer(Modifier.height(27.dp))
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     RegistrationField(
+                        enabled = !uiState.isLoading,
                         label = stringResource(R.string.register_name_label),
                         value = uiState.fullName, onValueChange = onNameChange,
                         hint = stringResource(R.string.register_name_hint), glyph = FormGlyph.Person,
                         error = if (uiState.validation.invalidName) stringResource(R.string.register_name_error) else null
                     )
                     RegistrationField(
+                        enabled = !uiState.isLoading,
                         label = stringResource(R.string.login_email_label),
                         value = uiState.email, onValueChange = onEmailChange,
                         hint = stringResource(R.string.login_email_hint), glyph = FormGlyph.Email,
@@ -98,6 +101,7 @@ fun RegisterScreen(
                         error = if (uiState.validation.invalidEmail) stringResource(R.string.login_email_error) else null
                     )
                     RegistrationField(
+                        enabled = !uiState.isLoading,
                         label = stringResource(R.string.login_password_label),
                         value = uiState.password, onValueChange = onPasswordChange,
                         hint = stringResource(R.string.login_password_hint), glyph = FormGlyph.Lock,
@@ -115,6 +119,7 @@ fun RegisterScreen(
                         }
                     )
                     RegistrationField(
+                        enabled = !uiState.isLoading,
                         label = stringResource(R.string.register_confirmation_label),
                         value = uiState.confirmPassword, onValueChange = onConfirmPasswordChange,
                         hint = stringResource(R.string.register_confirmation_hint), glyph = FormGlyph.Lock,
@@ -127,6 +132,7 @@ fun RegisterScreen(
                 Spacer(Modifier.height(14.dp))
                 Button(
                     onClick = submit,
+                    enabled = !uiState.isLoading,
                     modifier = Modifier.fillMaxWidth().height(54.dp)
                         .shadow(14.dp, RoundedCornerShape(16.dp),
                             ambientColor = RegisterBlue.copy(alpha = 0.25f),
@@ -134,7 +140,7 @@ fun RegisterScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = RegisterBlue)
                 ) {
-                    Text(stringResource(R.string.register_submit), color = Color.White,
+                    Text(stringResource(if (uiState.isLoading) R.string.auth_processing else R.string.register_submit), color = Color.White,
                         fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(32.dp))
@@ -142,6 +148,7 @@ fun RegisterScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.register_has_account), color = RegisterMuted, fontSize = 12.sp)
                     TextButton(onClick = onLoginClick,
+                        enabled = !uiState.isLoading,
                         contentPadding = PaddingValues(horizontal = 5.dp)) {
                         Text(stringResource(R.string.login_submit), color = RegisterBlue,
                             fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -161,6 +168,7 @@ private fun RegistrationField(
     hint: String,
     glyph: FormGlyph,
     error: String?,
+    enabled: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
     obscureText: Boolean = false,
     imeAction: ImeAction = ImeAction.Next,
@@ -171,6 +179,7 @@ private fun RegistrationField(
         Text(label, color = RegisterInk, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(7.dp))
         OutlinedTextField(
+            enabled = enabled,
             value = value, onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
             placeholder = { Text(hint, color = RegisterMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium) },

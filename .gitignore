@@ -25,6 +25,7 @@ keystore.properties
 key.properties
 signing.properties
 secrets.properties
+google-services.json
 .env
 .env.*
 !.env.example
@@ -42,3 +43,7 @@ secrets.properties
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Local documents and agent instructions
+*.docx
+[Aa][Gg][Ee][Nn][Tt][Ss].[Mm][Dd]

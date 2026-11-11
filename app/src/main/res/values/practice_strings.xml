@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="practice_title">Luyện nghe tiếng Anh</string>
+    <string name="practice_video">Video</string>
+    <string name="practice_podcast">Podcast</string>
+    <string name="practice_search">Tìm bài luyện nghe…</string>
+    <string name="practice_duration_filter">Lọc theo thời lượng</string>
+    <string name="practice_duration_all">Tất cả thời lượng</string>
+    <string name="practice_duration_short">Tối đa 10 phút</string>
+    <string name="practice_duration_long">Trên 10 phút</string>
+    <string name="practice_all">Tất cả</string>
+    <string name="practice_easy">Dễ</string>
+    <string name="practice_intermediate">Trung bình</string>
+    <string name="practice_hard">Khó</string>
+    <string name="practice_toeic">TOEIC</string>
+    <string name="practice_basic">Cơ bản</string>
+    <string name="practice_featured">BÀI HỌC ĐỀ XUẤT</string>
+    <string name="practice_featured_meta">%1$d phút · %2$s</string>
+    <string name="practice_start">Học ngay</string>
+    <string name="practice_latest_videos">Video mới nhất</string>
+    <string name="practice_popular_videos">Video phổ biến</string>
+    <string name="practice_latest_podcasts">Podcast mới nhất</string>
+    <string name="practice_popular_podcasts">Podcast phổ biến</string>
+    <string name="practice_popular">Phổ biến</string>
+    <string name="practice_newest">Mới nhất</string>
+    <string name="practice_progress">%1$d%% xong</string>
+    <string name="practice_open_lesson">Mở bài học %1$s</string>
+    <string name="practice_downloads">Bài học tải xuống</string>
+    <string name="practice_downloads_empty">Chưa có bài học tải xuống.</string>
+    <string name="practice_media_unavailable">Đây là bài học mẫu. Nội dung phát Video/Podcast chưa được kết nối.</string>
+    <string name="practice_no_results">Không tìm thấy bài học phù hợp</string>
+    <string name="practice_no_results_body">Thử tìm từ khác hoặc thay đổi bộ lọc.</string>
+    <string name="practice_close">Đóng</string>
+</resources>

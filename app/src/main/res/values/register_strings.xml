@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="register_title">Tạo tài khoản mới</string>
+    <string name="register_subtitle">Bắt đầu học thông minh cùng VocabLens AI.</string>
+    <string name="register_name_label">Họ và tên</string>
+    <string name="register_name_hint">Nguyễn Minh Anh</string>
+    <string name="register_confirmation_label">Xác nhận mật khẩu</string>
+    <string name="register_confirmation_hint">Nhập lại mật khẩu</string>
+    <string name="register_submit">Tạo tài khoản</string>
+    <string name="register_has_account">Đã có tài khoản?</string>
+    <string name="register_name_error">Vui lòng nhập họ và tên.</string>
+    <string name="register_confirmation_error">Mật khẩu xác nhận chưa khớp.</string>
+    <string name="register_service_unavailable">Chức năng tạo tài khoản chưa được kết nối với dịch vụ xác thực.</string>
+</resources>

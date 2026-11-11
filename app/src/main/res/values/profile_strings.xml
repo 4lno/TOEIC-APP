@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_active_learner">Học viên năng động</string>
+    <string name="profile_words_learned">Từ đã học</string>
+    <string name="profile_streak">Ngày liên tiếp</string>
+    <string name="profile_total_xp">Tổng XP</string>
+    <string name="profile_goal_title">Mục tiêu học tập</string>
+    <string name="profile_edit">Chỉnh sửa</string>
+    <string name="profile_daily_goal">%1$d từ mỗi ngày</string>
+    <string name="profile_today_words">Hôm nay đã hoàn thành %1$d từ</string>
+    <string name="profile_account_section">TÀI KHOẢN</string>
+    <string name="profile_app_section">ỨNG DỤNG</string>
+    <string name="profile_edit_info">Chỉnh sửa thông tin</string>
+    <string name="profile_edit_info_caption">Tên, email và ảnh đại diện</string>
+    <string name="profile_edit_avatar">Chỉnh sửa hồ sơ đại diện</string>
+    <string name="profile_stats">Thống kê học tập</string>
+    <string name="profile_stats_caption">Xem thành tích và tiến độ</string>
+    <string name="profile_reminder">Nhắc nhở học tập</string>
+    <string name="profile_reminder_time">Hằng ngày lúc 20:00</string>
+    <string name="profile_reminder_off">Đang tắt nhắc nhở</string>
+    <string name="profile_reminder_note">Giờ nhắc đã chọn: 20:00. Lựa chọn này được lưu trên thiết bị; tính năng gửi thông báo theo lịch chưa được tích hợp.</string>
+    <string name="profile_settings">Cài đặt</string>
+    <string name="profile_settings_caption">Âm thanh, ngôn ngữ, quyền riêng tư</string>
+    <string name="profile_logout">Đăng xuất</string>
+    <string name="profile_logout_caption">Hẹn gặp lại bạn!</string>
+    <string name="profile_logout_question">Bạn muốn đăng xuất và quay về màn hình đăng nhập?</string>
+    <string name="profile_version">VocabLens AI • Phiên bản 1.0 Prototype</string>
+    <string name="profile_name_label">Họ và tên</string>
+    <string name="profile_email_label">Email</string>
+    <string name="profile_local_edit_note">Cập nhật hồ sơ trên thiết bị. Ảnh đại diện dùng chữ viết tắt từ tên của bạn.</string>
+    <string name="profile_save">Lưu</string>
+    <string name="profile_cancel">Hủy</string>
+    <string name="profile_close">Đóng</string>
+    <string name="profile_goal_note">Chọn số từ bạn muốn học mỗi ngày.</string>
+    <string name="profile_goal_error">Mục tiêu cần nằm trong khoảng 1–500 từ.</string>
+    <string name="profile_sound">Âm thanh phát âm</string>
+    <string name="profile_language">Ngôn ngữ: Tiếng Việt</string>
+    <string name="profile_privacy">Hồ sơ và tùy chọn được lưu cục bộ trên thiết bị, chưa đồng bộ với tài khoản trực tuyến.</string>
+    <string name="profile_stats_body">%1$d từ đã học\n%2$d ngày học liên tiếp\n%3$s XP tích lũy\nHôm nay: %4$d / %5$d từ\n\nThống kê hiện là dữ liệu mẫu.</string>
+    <string name="profile_sound_disabled">Âm thanh đang tắt trong phần Cài đặt.</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_invalid_credentials">Email hoặc mật khẩu không đúng, hoặc tài khoản không khả dụng.</string>
+    <string name="auth_email_in_use">Email này đã được đăng ký. Vui lòng đăng nhập.</string>
+    <string name="auth_weak_password">Mật khẩu chưa đáp ứng yêu cầu bảo mật. Vui lòng chọn mật khẩu mạnh hơn.</string>
+    <string name="auth_network_error">Không thể kết nối. Vui lòng kiểm tra Internet và thử lại.</string>
+    <string name="auth_too_many_requests">Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.</string>
+    <string name="auth_operation_not_allowed">Đăng nhập bằng email và mật khẩu hiện chưa khả dụng.</string>
+    <string name="auth_profile_update_failed">Tài khoản đã được tạo nhưng chưa lưu được họ tên. Bạn có thể đăng nhập bằng email và mật khẩu vừa đăng ký.</string>
+    <string name="auth_unknown_error">Không thể hoàn tất yêu cầu. Vui lòng thử lại.</string>
+    <string name="auth_reset_sent">Nếu email có tài khoản, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.</string>
+    <string name="auth_processing">Đang xử lý…</string>
+</resources>

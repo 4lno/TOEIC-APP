@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_title">Chào mừng bạn trở lại!</string>
+    <string name="login_subtitle">Tiếp tục hành trình chinh phục tiếng Anh của bạn.</string>
+    <string name="login_email_label">Email</string>
+    <string name="login_email_hint">minhanh@email.com</string>
+    <string name="login_password_label">Mật khẩu</string>
+    <string name="login_password_hint">Tối thiểu 6 ký tự</string>
+    <string name="login_show_password">Hiện mật khẩu</string>
+    <string name="login_hide_password">Ẩn mật khẩu</string>
+    <string name="login_forgot_password">Quên mật khẩu?</string>
+    <string name="login_submit">Đăng nhập</string>
+    <string name="login_no_account">Chưa có tài khoản?</string>
+    <string name="login_register">Đăng ký</string>
+    <string name="login_email_error">Vui lòng nhập địa chỉ email hợp lệ.</string>
+    <string name="login_password_error">Mật khẩu phải có ít nhất 6 ký tự.</string>
+    <string name="login_auth_unavailable">Chức năng đăng nhập chưa được kết nối với dịch vụ xác thực.</string>
+    <string name="login_reset_unavailable">Chức năng khôi phục mật khẩu chưa được kết nối với dịch vụ xác thực.</string>
+</resources>
