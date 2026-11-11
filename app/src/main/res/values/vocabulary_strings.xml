@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="vocabulary_storage_error">Không thể đọc hoặc cập nhật sổ tay. Vui lòng mở lại ứng dụng và thử lại.</string>
     <string name="vocabulary_back">Quay lại trang chủ</string>
     <string name="vocabulary_sort">Sắp xếp từ vựng</string>
     <string name="vocabulary_sort_recent">Lưu gần đây</string>

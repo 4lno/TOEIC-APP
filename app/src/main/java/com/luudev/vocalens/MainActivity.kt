@@ -22,6 +22,7 @@ import com.luudev.vocalens.presentation.navigation.MainNavigation
 import com.luudev.vocalens.presentation.home.HomeViewModel
 import androidx.lifecycle.createSavedStateHandle
 import com.luudev.vocalens.data.repository.LocalVocabularyRepositoryImpl
+import com.luudev.vocalens.data.local.database.VocabLensDatabase
 import com.luudev.vocalens.domain.usecase.GetSavedVocabulary
 import com.luudev.vocalens.domain.usecase.DeleteVocabularyWord
 import com.luudev.vocalens.presentation.vocabulary.VocabularyViewModel
@@ -64,7 +65,7 @@ class MainActivity : ComponentActivity() {
         })[HomeViewModel::class.java]
         val vocabularyViewModel = ViewModelProvider(this, viewModelFactory {
             initializer {
-                val repository = LocalVocabularyRepositoryImpl(getSharedPreferences("vocabulary", MODE_PRIVATE))
+                val repository = LocalVocabularyRepositoryImpl(VocabLensDatabase.getInstance(applicationContext).vocabularyDao())
                 VocabularyViewModel(createSavedStateHandle(), GetSavedVocabulary(repository), DeleteVocabularyWord(repository))
             }
         })[VocabularyViewModel::class.java]
@@ -79,6 +80,11 @@ class MainActivity : ComponentActivity() {
         })[ProfileViewModel::class.java]
         setContent {
             VocaLensTheme(darkTheme = false, dynamicColor = false) {
+                LaunchedEffect(loginViewModel.uiState.showHome) {
+                    vocabularyViewModel.onUserChanged(
+                        if (loginViewModel.uiState.showHome) authRepository.currentUser()?.uid else null
+                    )
+                }
                 LaunchedEffect(registerViewModel.uiState.registered) {
                     if (registerViewModel.uiState.registered) {
                         loginViewModel.onRegistrationSucceeded()
@@ -107,6 +113,7 @@ class MainActivity : ComponentActivity() {
                         practiceViewModel = practiceViewModel,
                         profileViewModel = profileViewModel,
                         onLogoutConfirmed = {
+                            vocabularyViewModel.onUserChanged(null)
                             profileViewModel.onDismissDialog()
                             homeViewModel.onDismissAction()
                             registerViewModel.clearPasswords()

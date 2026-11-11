@@ -39,7 +39,7 @@ fun BottomNavigationBar(
     Surface(modifier = modifier, color = KoiColors.Surface, shadowElevation = 8.dp) {
         Column {
             HorizontalDivider(color = KoiColors.Outline)
-            Row(Modifier.fillMaxWidth().navigationBarsPadding().height(72.dp).selectableGroup(),
+            Row(Modifier.fillMaxWidth().navigationBarsPadding().height(80.dp).selectableGroup(),
                 verticalAlignment = Alignment.CenterVertically) {
                 BottomTab.entries.forEach { tab ->
                     val label = stringResource(when (tab) {
@@ -74,12 +74,13 @@ private fun BottomItem(label: String, glyph: AppGlyph, selected: Boolean, camera
     ) {
         if (camera) {
             Surface(shape = CircleShape, color = BarBlue, border = BorderStroke(4.dp, Color.White),
-                modifier = Modifier.offset(y = (-8).dp).size(49.dp).shadow(10.dp, CircleShape,
+                modifier = Modifier.size(49.dp).shadow(6.dp, CircleShape,
                     spotColor = BarBlue.copy(alpha = 0.35f))) {
                 Box(contentAlignment = Alignment.Center) {
                     AppIcon(glyph, Color.White, Modifier.size(23.dp))
                 }
             }
+            Spacer(Modifier.height(4.dp))
         } else {
             Box(Modifier.size(38.dp, 31.dp).background(if (selected) KoiColors.SoftWater else Color.Transparent,
                 RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
@@ -88,7 +89,7 @@ private fun BottomItem(label: String, glyph: AppGlyph, selected: Boolean, camera
             Spacer(Modifier.height(4.dp))
         }
         Text(label, color = if (selected) BarBlue else BarMuted, fontSize = 9.sp,
-            fontWeight = FontWeight.SemiBold, modifier = if (camera) Modifier.offset(y = (-6).dp) else Modifier)
+            fontWeight = FontWeight.SemiBold)
     }
 }
 

@@ -17,9 +17,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -33,10 +35,13 @@ import androidx.compose.ui.unit.sp
 import com.luudev.vocalens.presentation.components.AppGlyph
 import com.luudev.vocalens.presentation.components.AppIcon
 import com.luudev.vocalens.presentation.components.KoiPond
+import com.luudev.vocalens.presentation.components.KoiFeatureArtwork
 import com.luudev.vocalens.R
 import com.luudev.vocalens.domain.model.Dashboard
 import com.luudev.vocalens.presentation.theme.VocaLensTheme
 import kotlin.math.roundToInt
+import kotlin.math.cos
+import kotlin.math.sin
 
 private val Blue = KoiColors.Primary
 private val Ink = KoiColors.Ink
@@ -153,14 +158,43 @@ private fun StreakCard(days: Int) {
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             repeat(7) { index ->
-                Box(Modifier.size(28.dp).background(if (index < 6) KoiColors.SoftWater
-                    else Color.White.copy(alpha = 0.14f), CircleShape), contentAlignment = Alignment.Center) {
-                    if (index < 6) AppIcon(AppGlyph.Check, Blue, Modifier.size(12.dp))
-                    else Text(stringResource(R.string.home_sunday), color = Color(0xFFA7E4EE),
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
+                StreakDayLeaf(completed = index < 6)
             }
         }
+    }
+}
+
+@Composable
+private fun StreakDayLeaf(completed: Boolean) {
+    Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.matchParentSize()) {
+            val inset = 2.dp.toPx()
+            val bounds = Rect(inset, inset, size.width - inset, size.height - inset)
+            val leafCenter = Offset(size.width * .5f, size.height * .5f)
+            // A radial notch and fine veins give the badge a recognizable lily-pad silhouette.
+            val leaf = Path().apply {
+                moveTo(leafCenter.x, leafCenter.y * .78f)
+                arcTo(bounds, -65f, 330f, forceMoveTo = false)
+                close()
+            }
+            drawPath(leaf, Brush.linearGradient(
+                if (completed) listOf(Color(0xFF90BA7F), KoiColors.Lily)
+                else listOf(Color(0xFF588E7B), Color(0xFF3F786D))
+            ))
+            drawPath(leaf, KoiColors.SoftWater.copy(alpha = if (completed) .5f else .2f),
+                style = Stroke(.7.dp.toPx()))
+            repeat(6) { vein ->
+                val angle = (vein * 45f) * Math.PI / 180.0
+                val direction = Offset(cos(angle).toFloat(), sin(angle).toFloat())
+                drawLine(KoiColors.Surface.copy(alpha = if (completed) .18f else .08f),
+                    leafCenter + direction * (bounds.width * .24f),
+                    leafCenter + direction * (bounds.width * .45f), .6.dp.toPx())
+            }
+        }
+        if (completed) AppIcon(AppGlyph.Check, KoiColors.Surface,
+            Modifier.offset(y = 1.dp).size(14.dp))
+        else Text(stringResource(R.string.home_sunday), color = KoiColors.SoftWater,
+            fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(y = 1.dp))
     }
 }
 
@@ -214,34 +248,49 @@ private fun DailyGoalCard(dashboard: Dashboard) {
 
 @Composable
 private fun LearningGrid(pendingWords: Int, onAction: (HomeAction) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             LearningCard(stringResource(R.string.home_flashcards), stringResource(R.string.home_pending, pendingWords),
-                AppGlyph.Flashcard, Blue, KoiColors.SoftWater, Modifier.weight(1f)) { onAction(HomeAction.Flashcards) }
+                AppGlyph.Flashcard, 0, Modifier.weight(1f)) { onAction(HomeAction.Flashcards) }
             LearningCard(stringResource(R.string.home_camera), stringResource(R.string.home_camera_caption),
-                AppGlyph.Camera, KoiColors.OrangeInk, KoiColors.SoftOrange, Modifier.weight(1f)) { onAction(HomeAction.Camera) }
+                AppGlyph.Camera, 1, Modifier.weight(1f)) { onAction(HomeAction.Camera) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             LearningCard(stringResource(R.string.home_listening), stringResource(R.string.home_listening_caption),
-                AppGlyph.Headphones, Color(0xFFEE9400), Color(0xFFFFF3C7), Modifier.weight(1f)) { onAction(HomeAction.Listening) }
+                AppGlyph.Headphones, 2, Modifier.weight(1f)) { onAction(HomeAction.Listening) }
             LearningCard(stringResource(R.string.home_pronunciation), stringResource(R.string.home_pronunciation_caption),
-                AppGlyph.Mic, Color(0xFF00A99C), Color(0xFFC9FAF0), Modifier.weight(1f)) { onAction(HomeAction.Pronunciation) }
+                AppGlyph.Mic, 3, Modifier.weight(1f)) { onAction(HomeAction.Pronunciation) }
         }
     }
 }
 
 @Composable
-private fun LearningCard(title: String, subtitle: String, glyph: AppGlyph, tint: Color,
-    iconBackground: Color, modifier: Modifier, onClick: () -> Unit) {
-    DashboardCard(modifier, onClick) {
-        Column(Modifier.padding(13.dp)) {
-            IconTile(glyph, tint, iconBackground)
-            Spacer(Modifier.height(12.dp))
-            Text(title, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(subtitle, color = Muted, fontSize = 9.sp, modifier = Modifier.weight(1f))
-                AppIcon(AppGlyph.Chevron, Muted, Modifier.size(13.dp))
+private fun LearningCard(title: String, subtitle: String, glyph: AppGlyph, artwork: Int,
+    modifier: Modifier, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = modifier.fillMaxHeight(),
+        shape = RoundedCornerShape(24.dp), color = KoiColors.DeepWater,
+        border = BorderStroke(1.dp, KoiColors.Surface.copy(alpha = .85f))) {
+        Box(Modifier.fillMaxWidth().heightIn(min = 158.dp)) {
+            KoiFeatureArtwork(artwork, Modifier.matchParentSize())
+            Column(Modifier.fillMaxWidth().padding(16.dp).padding(bottom = 14.dp)) {
+                Surface(shape = RoundedCornerShape(16.dp), color = Color.Transparent,
+                    border = BorderStroke(1.dp, Color(0xFF9BE8D7).copy(alpha = .70f))) {
+                    Box(Modifier.size(44.dp).background(Brush.linearGradient(listOf(
+                        Color(0xFF72D4BE).copy(alpha = .50f), Color(0xFF3CA99C).copy(alpha = .24f)))),
+                        contentAlignment = Alignment.Center) {
+                        AppIcon(glyph, KoiColors.Surface, Modifier.size(26.dp))
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(title, color = KoiColors.Surface, fontSize = 17.sp, lineHeight = 22.sp,
+                    fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(subtitle, color = Color(0xFFC7E6DF), fontSize = 11.sp, lineHeight = 16.sp,
+                        modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(4.dp))
+                    AppIcon(AppGlyph.Chevron, KoiColors.Surface, Modifier.size(17.dp))
+                }
             }
         }
     }

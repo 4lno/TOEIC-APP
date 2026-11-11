@@ -52,6 +52,76 @@ fun KoiPond(modifier: Modifier = Modifier) {
     Canvas(modifier) { drawPond(phase.value, ambient = false) }
 }
 
+/** Compact pond composition with a quiet middle area reserved for the card's labels. */
+@Composable
+internal fun KoiFeatureArtwork(variant: Int, modifier: Modifier = Modifier) {
+    val phase = LocalPondPhase.current ?: rememberPondPhase()
+    Canvas(modifier) {
+        drawRect(Brush.linearGradient(listOf(Color(0xFF208A87), Color(0xFF096168), Color(0xFF278F85))))
+        val unit = size.minDimension / 180f
+        scale(unit, unit, pivot = center) {
+            val w = size.width / unit
+            val h = size.height / unit
+            val left = center.x - w / 2
+            val top = center.y - h / 2
+            fun point(x: Float, y: Float) = Offset(left + w * x, top + h * y)
+            // Soft ribbons of water follow the lower edge, away from the text.
+            repeat(3) { index ->
+                val wave = Path().apply {
+                    val y = .86f + index * .035f
+                    moveTo(left - 8f, top + h * y)
+                    cubicTo(left + w * .20f, top + h * (y - .17f),
+                        left + w * .35f, top + h * (y + .26f), left + w * .62f, top + h * y)
+                    cubicTo(left + w * .80f, top + h * (y - .20f),
+                        left + w * .95f, top + h * (y + .12f), left + w + 8f, top + h * (y - .05f))
+                }
+                drawPath(wave, Color(0xFF8AE1CA).copy(alpha = .12f - index * .025f),
+                    style = Stroke(if (index == 0) 1.3f else .6f))
+            }
+            when (variant) {
+                0 -> {
+                    lily(point(.90f, .98f), 22f)
+                    lily(point(.75f, 1.02f), 12f)
+                    lily(point(.06f, .90f), 10f, flower = true)
+                }
+                1 -> {
+                    lily(point(.83f, .02f), 20f)
+                    lily(point(.96f, .14f), 10f)
+                    lily(point(.68f, .04f), 9f, flower = true)
+                    lily(point(.78f, .96f), 7f)
+                }
+                2 -> {
+                    lily(point(.84f, .05f), 19f, flower = true)
+                    lily(point(.68f, -.02f), 12f)
+                    lily(point(.91f, .97f), 18f)
+                    lily(point(.77f, 1.02f), 13f, flower = true)
+                }
+                else -> {
+                    lily(point(.92f, -.01f), 24f)
+                    lily(point(.72f, .02f), 10f)
+                    lily(point(.91f, .23f), 11f)
+                }
+            }
+            val t = phase.value
+            val anchor = when (variant) {
+                0 -> point(.83f, .28f)
+                1 -> point(.84f, .38f)
+                2 -> point(.17f, .87f)
+                else -> point(.76f, .87f)
+            }
+            val fishPosition = anchor + Offset(sin(t + variant) * 3f, cos(t + variant) * 3f)
+            repeat(3) { ring ->
+                drawOval(Color(0xFF92DDC9).copy(alpha = .14f - ring * .035f),
+                    fishPosition - Offset(14f + ring * 7f, 9f + ring * 5f),
+                    Size(28f + ring * 14f, 18f + ring * 10f), style = Stroke(.6f))
+            }
+            val heading = when (variant) { 0 -> -35f; 1 -> 205f; 2 -> -42f; else -> 42f }
+            koi(fishPosition, 34f, heading + sin(t * 3f) * 5f,
+                KoiColors.Orange, swish = sin(t * 24f + variant))
+        }
+    }
+}
+
 /** Fixed to the screen viewport, behind all content, with no touch or accessibility nodes. */
 @Composable
 fun Modifier.pondBackground(prominent: Boolean = false): Modifier {

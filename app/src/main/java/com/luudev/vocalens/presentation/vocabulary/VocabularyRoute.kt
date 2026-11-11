@@ -37,6 +37,14 @@ fun VocabularyRoute(viewModel: VocabularyViewModel, soundEnabled: Boolean = true
     val loadingMessage = stringResource(R.string.vocabulary_voice_loading)
     val unavailableMessage = stringResource(R.string.vocabulary_voice_unavailable)
     val soundDisabledMessage = stringResource(R.string.profile_sound_disabled)
+    val storageErrorMessage = stringResource(R.string.vocabulary_storage_error)
+
+    LaunchedEffect(viewModel.uiState.storageError) {
+        if (viewModel.uiState.storageError) {
+            snackbarHostState.showSnackbar(storageErrorMessage)
+            viewModel.onStorageErrorDismissed()
+        }
+    }
 
     DisposableEffect(context, lifecycleOwner) {
         var disposed = false
