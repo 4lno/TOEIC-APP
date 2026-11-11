@@ -1,4 +1,4 @@
-package com.luudev.vocalens.ui.theme
+package com.luudev.vocalens.presentation.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

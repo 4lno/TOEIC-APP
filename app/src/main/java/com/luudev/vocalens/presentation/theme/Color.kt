@@ -1,4 +1,4 @@
-package com.luudev.vocalens.ui.theme
+package com.luudev.vocalens.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 
