@@ -1,5 +1,6 @@
 package com.luudev.vocalens.presentation.components
 
+import com.luudev.vocalens.presentation.theme.KoiColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -25,8 +26,8 @@ import com.luudev.vocalens.R
 
 enum class BottomTab { Home, Vocabulary, Camera, Practice, Profile }
 
-private val BarBlue = Color(0xFF2864FF)
-private val BarMuted = Color(0xFF8192AD)
+private val BarBlue = KoiColors.Primary
+private val BarMuted = KoiColors.Muted
 
 /** Draws tabs and emits clicks. The parent owns selection and navigation. */
 @Composable
@@ -35,9 +36,9 @@ fun BottomNavigationBar(
     onTabSelected: (BottomTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(modifier = modifier, color = Color.White, shadowElevation = 8.dp) {
+    Surface(modifier = modifier, color = KoiColors.Surface, shadowElevation = 8.dp) {
         Column {
-            HorizontalDivider(color = Color(0xFFE4EAF3))
+            HorizontalDivider(color = KoiColors.Outline)
             Row(Modifier.fillMaxWidth().navigationBarsPadding().height(72.dp).selectableGroup(),
                 verticalAlignment = Alignment.CenterVertically) {
                 BottomTab.entries.forEach { tab ->
@@ -80,9 +81,9 @@ private fun BottomItem(label: String, glyph: AppGlyph, selected: Boolean, camera
                 }
             }
         } else {
-            Box(Modifier.size(38.dp, 31.dp).background(if (selected) Color(0xFFDCEAFF) else Color.Transparent,
+            Box(Modifier.size(38.dp, 31.dp).background(if (selected) KoiColors.SoftWater else Color.Transparent,
                 RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                AppIcon(glyph, if (selected) BarBlue else Color(0xFFA3B1C7), Modifier.size(22.dp))
+                AppIcon(glyph, if (selected) BarBlue else KoiColors.Muted, Modifier.size(22.dp))
             }
             Spacer(Modifier.height(4.dp))
         }

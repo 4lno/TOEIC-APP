@@ -1,5 +1,7 @@
 package com.luudev.vocalens.presentation.navigation
 
+import com.luudev.vocalens.presentation.components.pondBackground
+import com.luudev.vocalens.presentation.theme.KoiColors
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,7 +55,7 @@ fun MainNavigation(
 
     Scaffold(
         modifier = modifier,
-        containerColor = if (destination == MainDestination.Profile) Color(0xFF2347BC) else Color(0xFFF7F9FB),
+        containerColor = if (destination == MainDestination.Profile) KoiColors.DeepWater else KoiColors.Mint,
         contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
             BottomNavigationBar(destination.tab, onTabSelected = { tab ->
@@ -130,18 +132,18 @@ private fun MainDestinationScreen(destination: MainDestination, learnerName: Str
         MainDestination.Practice -> AppGlyph.Practice
         MainDestination.Profile -> AppGlyph.Person
     }
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center,
+    Column(Modifier.fillMaxSize().pondBackground().padding(24.dp), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(color = Color(0xFFDCEAFF), shape = RoundedCornerShape(20.dp)) {
-            AppIcon(icon, Color(0xFF2864FF), Modifier.padding(18.dp).size(32.dp))
+        Surface(color = KoiColors.SoftWater, shape = RoundedCornerShape(20.dp)) {
+            AppIcon(icon, KoiColors.Primary, Modifier.padding(18.dp).size(32.dp))
         }
         Spacer(Modifier.height(20.dp))
-        Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF071A33))
+        Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = KoiColors.Ink)
         Spacer(Modifier.height(12.dp))
         Text(if (destination == MainDestination.Profile) stringResource(R.string.home_profile_body, learnerName)
             else stringResource(R.string.navigation_feature_pending, title),
-            textAlign = TextAlign.Center, color = Color(0xFF8192AD))
+            textAlign = TextAlign.Center, color = KoiColors.Muted)
         Spacer(Modifier.height(20.dp))
-        TextButton(onClick = onHomeClick) { Text(stringResource(R.string.navigation_back_home), color = Color(0xFF2864FF)) }
+        TextButton(onClick = onHomeClick) { Text(stringResource(R.string.navigation_back_home), color = KoiColors.Primary) }
     }
 }
