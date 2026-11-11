@@ -60,6 +60,7 @@ fun HomeScreen(uiState: HomeUiState, onAction: (HomeAction) -> Unit,
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item { HomeHeader(dashboard, onAction) }
+            if (uiState.storageError) item { Text(stringResource(R.string.local_storage_error), color = MaterialTheme.colorScheme.error) }
             item { PondBanner() }
             item { StreakCard(dashboard.streakDays) }
             item {
@@ -74,14 +75,14 @@ fun HomeScreen(uiState: HomeUiState, onAction: (HomeAction) -> Unit,
                 Spacer(Modifier.height(12.dp))
                 LearningGrid(dashboard.pendingWords, onAction)
             }
-            item {
+            if (dashboard.continuedLessonTitle != null) item {
                 SectionTitle(stringResource(R.string.home_continue), stringResource(R.string.home_view_all)) {
                     onAction(HomeAction.Courses)
                 }
                 Spacer(Modifier.height(10.dp))
                 ContinueLearningCard(dashboard) { onAction(HomeAction.Courses) }
             }
-            item {
+            if (dashboard.hasRecentActivity) item {
                 SectionTitle(stringResource(R.string.home_recent))
                 Spacer(Modifier.height(12.dp))
                 RecentActivityCard(dashboard) { onAction(HomeAction.Listening) }
@@ -158,7 +159,7 @@ private fun StreakCard(days: Int) {
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             repeat(7) { index ->
-                StreakDayLeaf(completed = index < 6)
+                StreakDayLeaf(completed = index < days.coerceIn(0, 7))
             }
         }
     }
@@ -305,7 +306,7 @@ private fun ContinueLearningCard(dashboard: Dashboard, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.home_course_category), color = Blue, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.home_course_title, dashboard.pendingWords), color = Ink,
+                Text(dashboard.continuedLessonTitle.orEmpty(), color = Ink,
                     fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(9.dp))
                 ProgressLine(dashboard.courseProgress)
@@ -332,7 +333,6 @@ private fun RecentActivityCard(dashboard: Dashboard, onClick: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 Text(stringResource(R.string.home_activity_caption, dashboard.recentActivityMinutes), color = Muted, fontSize = 8.sp)
             }
-            Text(stringResource(R.string.home_xp, dashboard.earnedXp), color = KoiColors.OrangeInk, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -415,6 +415,6 @@ private fun HomeActionDialog(action: HomeAction, dashboard: Dashboard, onDismiss
 @Composable
 private fun HomeScreenPreview() {
     VocaLensTheme(darkTheme = false, dynamicColor = false) {
-        HomeScreen(HomeUiState(Dashboard("Minh Anh", "MA", 7, 17, 25, 24, 12, 0.72f, 8, 20)), {}, {})
+        HomeScreen(HomeUiState(), {}, {})
     }
 }

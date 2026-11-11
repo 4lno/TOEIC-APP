@@ -60,6 +60,7 @@ fun ProfileScreen(
     LazyColumn(modifier.fillMaxSize().pondBackground(),
         contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { ProfileHero(profile, onOpenDialog) }
+        if (uiState.storageError) item { Text(stringResource(R.string.local_storage_error), color = MaterialTheme.colorScheme.error) }
         item {
             Column(Modifier.padding(horizontal = 18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -271,6 +272,7 @@ private fun ProfileDialogContent(dialog: ProfileDialog, state: ProfileUiState, o
                             isError = state.validation.invalidName,
                             supportingText = if (state.validation.invalidName) { { Text(stringResource(R.string.register_name_error)) } } else null)
                         OutlinedTextField(state.draftEmail, onEmailChange, singleLine = true,
+                            readOnly = true,
                             label = { Text(stringResource(R.string.profile_email_label)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             isError = state.validation.invalidEmail,
@@ -321,6 +323,6 @@ private fun formatNumber(value: Int) = NumberFormat.getIntegerInstance(Locale.fo
 @Composable
 private fun ProfileScreenPreview() {
     VocaLensTheme(darkTheme = false, dynamicColor = false) {
-        ProfileScreen(ProfileUiState(UserProfile("Nguyễn Minh Anh", "minhanh@email.com")), {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+        ProfileScreen(ProfileUiState(), {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
     }
 }

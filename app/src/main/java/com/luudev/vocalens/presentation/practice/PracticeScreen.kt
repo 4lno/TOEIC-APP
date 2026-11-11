@@ -110,7 +110,7 @@ fun PracticeScreen(
                 Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     AppIcon(AppGlyph.Headphones, Muted, Modifier.size(35.dp))
                     Spacer(Modifier.height(15.dp))
-                    Text(stringResource(R.string.practice_no_results), color = Ink, fontSize = 15.sp)
+                    Text(stringResource(if (uiState.storageError) R.string.local_storage_error else R.string.practice_no_results), color = Ink, fontSize = 15.sp)
                     Spacer(Modifier.height(8.dp))
                     Text(stringResource(R.string.practice_no_results_body), color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center)
                 }
@@ -331,11 +331,7 @@ private fun durationLabel(seconds: Int) = String.format(Locale.ROOT, "%02d:%02d"
 @Preview(showBackground = true, widthDp = 320, heightDp = 560)
 @Composable
 private fun PracticeScreenPreview() {
-    val featured = PracticeLesson("sample", "Daily English: Small Talk", "Giao tiếp hằng ngày", PracticeMediaType.Video,
-        LessonDifficulty.Easy, 600, 0f, 98, 4, "student", isFeatured = true)
-    val lesson = PracticeLesson("cafe", "Giao tiếp tại quán cà phê", "Giao tiếp hằng ngày", PracticeMediaType.Video,
-        LessonDifficulty.Easy, 504, 0.65f, 95, 3, "cafe")
     VocaLensTheme(darkTheme = false, dynamicColor = false) {
-        PracticeScreen(PracticeUiState(featuredLesson = featured, lessons = listOf(lesson)), {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+        PracticeScreen(PracticeUiState(), {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
     }
 }

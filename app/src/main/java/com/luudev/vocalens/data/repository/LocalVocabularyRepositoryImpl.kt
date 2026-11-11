@@ -13,7 +13,8 @@ class LocalVocabularyRepositoryImpl(private val dao: VocabularyDao) : Vocabulary
     }
 
     override suspend fun saveWord(userId: String, word: VocabularyWord) {
-        dao.saveWord(word.toEntity(requireUser(userId), System.currentTimeMillis()))
+        val now = System.currentTimeMillis()
+        dao.saveWord(requireUser(userId), word.toEntity(now), now)
     }
 
     override suspend fun deleteWord(userId: String, wordId: String) {

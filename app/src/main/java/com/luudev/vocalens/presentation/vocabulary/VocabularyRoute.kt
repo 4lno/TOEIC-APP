@@ -83,6 +83,8 @@ fun VocabularyRoute(viewModel: VocabularyViewModel, soundEnabled: Boolean = true
             uiState = viewModel.uiState,
             onBackClick = onBackClick,
             onQueryChange = viewModel::onQueryChange,
+            onLookup = viewModel::onLookup,
+            onSaveLookupWord = viewModel::onSaveLookupWord,
             onCategorySelected = viewModel::onCategorySelected,
             onSortSelected = viewModel::onSortSelected,
             onSpeakWord = { word ->
@@ -91,6 +93,13 @@ fun VocabularyRoute(viewModel: VocabularyViewModel, soundEnabled: Boolean = true
                     !initialized -> speechMessage = loadingMessage
                     !voiceAvailable -> speechMessage = unavailableMessage
                     else -> {
+                        val accent = viewModel.uiState.lookupResults.firstOrNull { it.word.id == word.id }?.accent
+                        val locale = if (accent == com.luudev.vocalens.domain.model.DictionaryAccent.American) Locale.US else Locale.UK
+                        val languageStatus = engine?.setLanguage(locale)
+                        if (languageStatus == null || languageStatus < TextToSpeech.LANG_AVAILABLE) {
+                            speechMessage = unavailableMessage
+                            return@VocabularyScreen
+                        }
                         val result = engine?.speak(word.english, TextToSpeech.QUEUE_FLUSH, null, word.id)
                         if (result != TextToSpeech.SUCCESS) speechMessage = unavailableMessage
                     }

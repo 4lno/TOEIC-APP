@@ -7,6 +7,13 @@ import com.luudev.vocalens.domain.model.VocabularyWord
 import com.luudev.vocalens.domain.repository.VocabularyRepository
 import com.luudev.vocalens.domain.usecase.DeleteVocabularyWord
 import com.luudev.vocalens.domain.usecase.GetSavedVocabulary
+import com.luudev.vocalens.domain.usecase.LookupVocabulary
+import com.luudev.vocalens.domain.usecase.SaveVocabularyWord
+import com.luudev.vocalens.domain.repository.DictionaryRepository
+import com.luudev.vocalens.domain.model.DictionaryEntry
+import com.luudev.vocalens.domain.model.DictionaryError
+import com.luudev.vocalens.domain.model.DictionaryException
+import kotlinx.coroutines.delay
 import com.luudev.vocalens.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +46,59 @@ class RoomVocabularyViewModelTest {
 
     private fun repository() = FakeRepository().apply { words("A").value = listOf(headphones, notebook) }
     private fun viewModel(repo: FakeRepository, handle: SavedStateHandle = SavedStateHandle()) =
-        VocabularyViewModel(handle, GetSavedVocabulary(repo), DeleteVocabularyWord(repo)).apply { onUserChanged("A") }
+        VocabularyViewModel(handle, GetSavedVocabulary(repo), DeleteVocabularyWord(repo),
+            LookupVocabulary(object : DictionaryRepository {
+                override suspend fun lookup(query: String) = emptyList<DictionaryEntry>()
+            }), SaveVocabularyWord(repo)).apply { onUserChanged("A") }
+
+    @Test fun lookupDoesNotFilterNotebookAndCanSaveTranslation() = runTest {
+        val repo = repository()
+        val word = VocabularyWord("hello", "hello", "/hello/", "xin chào", VocabularyCategory.Objects,
+            "interjection", "Hello, everyone.")
+        var received = ""
+        val vm = VocabularyViewModel(SavedStateHandle(), GetSavedVocabulary(repo), DeleteVocabularyWord(repo),
+            LookupVocabulary(object : DictionaryRepository {
+                override suspend fun lookup(query: String): List<DictionaryEntry> {
+                    received = query
+                    return listOf(DictionaryEntry(word, "A greeting", "", "", ""))
+                }
+            }), SaveVocabularyWord(repo))
+        vm.onUserChanged("A")
+        runCurrent()
+        vm.onQueryChange(" hello ")
+        vm.onLookup()
+        runCurrent()
+        assertEquals("hello", received)
+        assertEquals(2, vm.uiState.visibleWords.size)
+        assertEquals(word, vm.uiState.lookupResults.single().word)
+        vm.onSaveLookupWord(word)
+        runCurrent()
+        assertTrue(repo.words("A").value.contains(word))
+        assertEquals("interjection", repo.words("A").value.last().partOfSpeech)
+    }
+
+    @Test fun queryChangeCancelsOldLookupAndErrorsAllowRetry() = runTest {
+        val repo = repository()
+        val vm = VocabularyViewModel(SavedStateHandle(), GetSavedVocabulary(repo), DeleteVocabularyWord(repo),
+            LookupVocabulary(object : DictionaryRepository {
+                override suspend fun lookup(query: String): List<DictionaryEntry> {
+                    if (query == "old") delay(1000)
+                    throw DictionaryException(DictionaryError.NotFound)
+                }
+            }), SaveVocabularyWord(repo))
+        vm.onUserChanged("A")
+        vm.onQueryChange("old")
+        vm.onLookup()
+        runCurrent()
+        assertTrue(vm.uiState.lookupLoading)
+        vm.onQueryChange("new")
+        assertFalse(vm.uiState.lookupLoading)
+        assertTrue(vm.uiState.lookupResults.isEmpty())
+        vm.onLookup()
+        runCurrent()
+        assertEquals(DictionaryError.NotFound, vm.uiState.lookupError)
+        assertFalse(vm.uiState.lookupLoading)
+    }
 
     @Test fun cancelingDeletionKeepsWords() = runTest {
         val repo = repository()
