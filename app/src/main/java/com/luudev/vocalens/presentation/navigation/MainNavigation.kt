@@ -27,6 +27,7 @@ import com.luudev.vocalens.presentation.components.BottomNavigationBar
 import com.luudev.vocalens.presentation.home.HomeAction
 import com.luudev.vocalens.presentation.home.HomeScreen
 import com.luudev.vocalens.presentation.home.HomeUiState
+import com.luudev.vocalens.presentation.vocabulary.CollectionViewModel
 import com.luudev.vocalens.presentation.vocabulary.VocabularyRoute
 import com.luudev.vocalens.presentation.vocabulary.VocabularyViewModel
 import com.luudev.vocalens.presentation.practice.PracticeScreen
@@ -41,6 +42,7 @@ fun MainNavigation(
     onHomeAction: (HomeAction) -> Unit,
     onDismissHomeAction: () -> Unit,
     vocabularyViewModel: VocabularyViewModel,
+    collectionViewModel: CollectionViewModel,
     practiceViewModel: PracticeViewModel,
     profileViewModel: ProfileViewModel,
     onLogoutConfirmed: () -> Unit,
@@ -76,7 +78,7 @@ fun MainNavigation(
                             else -> onHomeAction(action)
                         }
                     }, onDismissAction = onDismissHomeAction)
-                    MainDestination.Vocabulary -> VocabularyRoute(vocabularyViewModel,
+                    MainDestination.Vocabulary -> VocabularyRoute(vocabularyViewModel, collectionViewModel,
                         soundEnabled = profileViewModel.uiState.profile.soundEnabled) {
                         destination = MainDestination.Home
                     }

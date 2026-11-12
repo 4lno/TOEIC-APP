@@ -66,6 +66,33 @@ class AppDatabaseTest {
         assertEquals(1, db.vocabularyDao().observeWords("B").first().size)
     }
 
+    @Test fun collectionCrudCountsAndMembershipRollbackAreAccountScoped() = runBlocking {
+        save("A"); save("B")
+        val repository = LocalCollectionRepositoryImpl(db.collectionDao())
+        repository.create("A", "Travel", "Words for trips")
+        val id = repository.observeCollections("A").first().single().id
+        assertTrue(repository.observeCollections("B").first().isEmpty())
+        repository.update("A", id, "TOEIC", "Updated description")
+        assertEquals("TOEIC", repository.observeCollections("A").first().single().name)
+        mustFail { repository.update("B", id, "Wrong owner", "") }
+        repository.setWords("A", id, setOf("book"))
+        assertEquals(1, repository.observeCollections("A").first().single().wordCount)
+        mustFail { repository.setWords("A", id, setOf("book", "missing")) }
+        assertEquals(1, repository.observeWords("A", id).first().size)
+        mustFail { repository.setWords("B", id, setOf("book")) }
+        repository.removeWord("A", id, "book")
+        assertEquals(0, repository.observeCollections("A").first().single().wordCount)
+        repository.setWords("A", id, setOf("book"))
+        repository.setWords("A", id, emptySet())
+        assertTrue(repository.observeWords("A", id).first().isEmpty())
+        repository.setWords("A", id, setOf("book"))
+        repository.delete("A", id)
+        mustFail { repository.update("A", id, "Cannot recreate", "") }
+        assertTrue(repository.observeCollections("A").first().isEmpty())
+        assertEquals(1, db.vocabularyDao().observeWords("A").first().size)
+        assertEquals(1, db.vocabularyDao().observeWords("B").first().size)
+    }
+
     @Test fun reviewAndXpRetriesAreIdempotentAndHistorySurvivesUnsave() = runBlocking {
         save(); start()
         db.studyDao().recordReview(review())

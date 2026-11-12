@@ -1,5 +1,13 @@
 package com.luudev.vocalens
 
+import com.luudev.vocalens.presentation.vocabulary.CollectionViewModel
+import com.luudev.vocalens.data.repository.LocalCollectionRepositoryImpl
+import com.luudev.vocalens.domain.usecase.ObserveCollections
+import com.luudev.vocalens.domain.usecase.ObserveCollectionWords
+import com.luudev.vocalens.domain.usecase.SaveCollection
+import com.luudev.vocalens.domain.usecase.DeleteCollection
+import com.luudev.vocalens.domain.usecase.SetCollectionWords
+import com.luudev.vocalens.domain.usecase.RemoveCollectionWord
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -84,6 +92,14 @@ class MainActivity : ComponentActivity() {
                     com.luudev.vocalens.domain.usecase.SaveVocabularyWord(repository))
             }
         })[VocabularyViewModel::class.java]
+        val collectionViewModel = ViewModelProvider(this, viewModelFactory {
+            initializer {
+                val repository = LocalCollectionRepositoryImpl(database.collectionDao())
+                CollectionViewModel(ObserveCollections(repository), ObserveCollectionWords(repository),
+                    SaveCollection(repository), DeleteCollection(repository), SetCollectionWords(repository),
+                    RemoveCollectionWord(repository), GetSavedVocabulary(LocalVocabularyRepositoryImpl(database.vocabularyDao())))
+            }
+        })[CollectionViewModel::class.java]
         val practiceViewModel = ViewModelProvider(this, viewModelFactory {
             initializer { PracticeViewModel(createSavedStateHandle(), GetPracticeLessons(LocalPracticeRepositoryImpl(database.lessonDao()))) }
         })[PracticeViewModel::class.java]
@@ -103,6 +119,7 @@ class MainActivity : ComponentActivity() {
                     sessionReady = false
                     sessionError = false
                     vocabularyViewModel.onUserChanged(null)
+                    collectionViewModel.onUserChanged(null)
                     profileViewModel.onUserChanged(null)
                     practiceViewModel.onUserChanged(null)
                     homeViewModel.onUserChanged(null)
@@ -110,6 +127,7 @@ class MainActivity : ComponentActivity() {
                         try {
                             synchronizeLocalUser(user)
                             vocabularyViewModel.onUserChanged(user.uid)
+                            collectionViewModel.onUserChanged(user.uid)
                             profileViewModel.onUserChanged(user.uid)
                             practiceViewModel.onUserChanged(user.uid)
                             homeViewModel.onUserChanged(user.uid)
@@ -149,10 +167,12 @@ class MainActivity : ComponentActivity() {
                         onHomeAction = homeViewModel::onAction,
                         onDismissHomeAction = homeViewModel::onDismissAction,
                         vocabularyViewModel = vocabularyViewModel,
+                        collectionViewModel = collectionViewModel,
                         practiceViewModel = practiceViewModel,
                         profileViewModel = profileViewModel,
                         onLogoutConfirmed = {
                             vocabularyViewModel.onUserChanged(null)
+                            collectionViewModel.onUserChanged(null)
                             profileViewModel.onUserChanged(null)
                             practiceViewModel.onUserChanged(null)
                             homeViewModel.onUserChanged(null)
