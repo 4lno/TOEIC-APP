@@ -15,6 +15,8 @@ import com.luudev.vocalens.domain.usecase.RateFlashcard
 import com.luudev.vocalens.domain.usecase.AbandonFlashcards
 import com.luudev.vocalens.presentation.flashcard.FlashcardViewModel
 import com.luudev.vocalens.presentation.camera.CameraViewModel
+import com.luudev.vocalens.data.repository.LocalObjectRecognitionRepository
+import com.luudev.vocalens.domain.usecase.RecognizeObjectsUseCase
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -74,7 +76,10 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
         )
         val viewModel = ViewModelProvider(this)[WelcomeViewModel::class.java]
-        val cameraViewModel = ViewModelProvider(this)[CameraViewModel::class.java]
+        val cameraViewModel = ViewModelProvider(this, viewModelFactory {
+            initializer { CameraViewModel(RecognizeObjectsUseCase(
+                LocalObjectRecognitionRepository(applicationContext))) }
+        })[CameraViewModel::class.java]
         val database = VocabLensDatabase.getInstance(applicationContext)
         val statistics = LocalLearningStatistics(database.statisticsDao(), database.studyDao())
         val synchronizeLocalUser = SynchronizeLocalUser(LocalUserRepositoryImpl(database.userDao()))

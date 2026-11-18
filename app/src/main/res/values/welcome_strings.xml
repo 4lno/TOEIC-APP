@@ -9,7 +9,7 @@
     <string name="welcome_eyebrow">HỌC TIẾNG ANH THÔNG MINH</string>
     <string name="welcome_title">Nhìn quanh,</string>
     <string name="welcome_title_accent">học từ mới</string>
-    <string name="welcome_description">Khám phá tiếng Anh từ mọi điều quanh bạn.</string>
+    <string name="welcome_description">Học tiếng Anh từ mọi điều quanh bạn.</string>
     <string name="welcome_start">Bắt đầu</string>
-    <string name="welcome_safety">Học tập miễn phí</string>
+    <string name="welcome_safety">.</string>
 </resources>
