@@ -46,6 +46,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.luudev.vocalens.R
+import com.luudev.vocalens.domain.model.RecognizedObject
 import com.luudev.vocalens.presentation.components.AppGlyph
 import com.luudev.vocalens.presentation.components.AppIcon
 import com.luudev.vocalens.presentation.theme.KoiColors
@@ -57,7 +58,12 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
-fun CameraRoute(viewModel: CameraViewModel, onBack: () -> Unit) {
+fun CameraRoute(
+    viewModel: CameraViewModel,
+    onWordSelected: (RecognizedObject) -> Unit = {},
+    wordEditor: @Composable () -> Unit = {},
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     fun hasPermission() = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -111,7 +117,7 @@ fun CameraRoute(viewModel: CameraViewModel, onBack: () -> Unit) {
                     }) { Text(stringResource(R.string.camera_settings), color = Color.White) }
                 }
             } else if (state.photo != null) {
-                RecognitionResults(state, viewModel::onRetake, viewModel::retryRecognition)
+                RecognitionResults(state, viewModel::onRetake, viewModel::retryRecognition, onWordSelected)
             } else {
                 CameraPreview(viewModel, Modifier.fillMaxSize())
                 if (state.hasError) {
@@ -124,6 +130,7 @@ fun CameraRoute(viewModel: CameraViewModel, onBack: () -> Unit) {
             }
         }
     }
+    wordEditor()
 }
 
 @Composable
@@ -238,7 +245,8 @@ private fun uprightJpeg(image: ImageProxy): ByteArray {
 }
 
 @Composable
-internal fun RecognitionResults(state: CameraUiState, onRetake: () -> Unit, onRetry: () -> Unit) {
+internal fun RecognitionResults(state: CameraUiState, onRetake: () -> Unit, onRetry: () -> Unit,
+    onWordSelected: (RecognizedObject) -> Unit = {}) {
     val photo = state.photo
     val bitmap by produceState<Bitmap?>(null, photo) {
         value = withContext(Dispatchers.Default) {
@@ -282,11 +290,14 @@ internal fun RecognitionResults(state: CameraUiState, onRetake: () -> Unit, onRe
                 contentPadding = PaddingValues(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(state.objects.groupBy { it.classId }.values.map { matches -> matches.maxBy { it.confidence } },
                     key = { it.classId }) { item ->
-                    Surface(shape = MaterialTheme.shapes.medium, color = KoiColors.Surface) {
+                    Surface(onClick = { onWordSelected(item) },
+                        shape = MaterialTheme.shapes.medium, color = KoiColors.Surface) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(item.label, Modifier.weight(1f), color = KoiColors.Ink)
                             Text(stringResource(R.string.camera_confidence, (item.confidence * 100).roundToInt()),
                                 style = MaterialTheme.typography.bodySmall, color = KoiColors.Muted)
+                            Spacer(Modifier.width(8.dp))
+                            AppIcon(AppGlyph.Chevron, KoiColors.Primary)
                         }
                     }
                 }
