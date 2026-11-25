@@ -158,15 +158,16 @@ private fun StreakCard(days: Int) {
         }
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            val dayLabels = listOf("CN", "T2", "T3", "T4", "T5", "T6", "T7")
             repeat(7) { index ->
-                StreakDayLeaf(completed = index < days.coerceIn(0, 7))
+                StreakDayLeaf(label = dayLabels[index], completed = index < days.coerceIn(0, 7))
             }
         }
     }
 }
 
 @Composable
-private fun StreakDayLeaf(completed: Boolean) {
+private fun StreakDayLeaf(label: String, completed: Boolean) {
     Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize()) {
             val inset = 2.dp.toPx()
@@ -194,7 +195,7 @@ private fun StreakDayLeaf(completed: Boolean) {
         }
         if (completed) AppIcon(AppGlyph.Check, KoiColors.Surface,
             Modifier.offset(y = 1.dp).size(14.dp))
-        else Text(stringResource(R.string.home_sunday), color = KoiColors.SoftWater,
+        else Text(label, color = KoiColors.SoftWater,
             fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(y = 1.dp))
     }
 }
