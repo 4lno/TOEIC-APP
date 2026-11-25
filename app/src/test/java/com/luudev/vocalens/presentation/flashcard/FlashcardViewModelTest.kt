@@ -68,7 +68,6 @@ class FlashcardViewModelTest {
         val event = repo.reviews.single().second
         assertTrue(event.completed)
         assertEquals(500L, event.activeDurationMs)
-        assertEquals(5, event.earnedXp)
     }
 
     @Test fun failedWriteKeepsCardAndRetriesIdenticalEventWithoutSkipping() = runTest {
@@ -90,6 +89,7 @@ class FlashcardViewModelTest {
         assertEquals(1, vm.uiState.index)
         assertFalse(vm.uiState.revealed)
         assertEquals(listOf(FlashcardRating.HARD), vm.uiState.ratings)
+        assertEquals(0, vm.uiState.earnedXp)
     }
 
     @Test fun doubleTapCannotRecordTwoReviews() = runTest {

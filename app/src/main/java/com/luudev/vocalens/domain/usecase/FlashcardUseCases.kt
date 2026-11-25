@@ -9,7 +9,7 @@ class StartFlashcards(private val repository: FlashcardRepository) {
 
 class RateFlashcard(private val repository: FlashcardRepository) {
     suspend operator fun invoke(userId: String, review: FlashcardReview) {
-        require(review.responseDurationMs >= 0 && review.activeDurationMs >= 0 && review.earnedXp >= 0)
+        require(review.responseDurationMs >= 0 && review.activeDurationMs >= 0)
         repository.review(userId, review)
     }
 }

@@ -32,7 +32,7 @@ data class FlashcardUiState(
     val deck get() = availableWords.filter { category == null || it.category == category }
     val current get() = cards.getOrNull(index)
     val remembered get() = ratings.count { it == FlashcardRating.GOOD || it == FlashcardRating.EASY }
-    val earnedXp get() = ratings.size * 5
+    val earnedXp get() = CalculateFlashcardXp()(ratings.size, stage == FlashcardStage.Completed)
 }
 
 class FlashcardViewModel(
@@ -132,7 +132,7 @@ class FlashcardViewModel(
         if (uiState.stage != FlashcardStage.Studying || !uiState.revealed || uiState.busy) return
         val last = uiState.index == uiState.cards.lastIndex
         val review = pendingReview ?: FlashcardReview(id, card.id, rating, now().coerceAtLeast(startedAt),
-            (monotonic() - cardStarted).coerceAtLeast(0), elapsedActive(), last, (uiState.ratings.size + 1) * 5)
+            (monotonic() - cardStarted).coerceAtLeast(0), elapsedActive(), last)
         pendingReview = review
         uiState = uiState.copy(busy = true, error = false)
         operation = viewModelScope.launch {

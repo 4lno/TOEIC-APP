@@ -5,9 +5,13 @@ import com.luudev.vocalens.data.local.database.VocabLensDatabase
 import com.luudev.vocalens.data.local.entity.StudySessionEntity
 import com.luudev.vocalens.data.local.entity.VocabularyReviewEntity
 import com.luudev.vocalens.domain.model.FlashcardReview
+import com.luudev.vocalens.domain.usecase.CalculateFlashcardXp
 import com.luudev.vocalens.domain.repository.FlashcardRepository
 
-class LocalFlashcardRepositoryImpl(private val database: VocabLensDatabase) : FlashcardRepository {
+class LocalFlashcardRepositoryImpl(
+    private val database: VocabLensDatabase,
+    private val calculateFlashcardXp: CalculateFlashcardXp = CalculateFlashcardXp()
+) : FlashcardRepository {
     private val study = database.studyDao()
 
     override suspend fun start(userId: String, sessionId: String, startedAt: Long) = database.withTransaction {
@@ -27,8 +31,10 @@ class LocalFlashcardRepositoryImpl(private val database: VocabLensDatabase) : Fl
         ))
         if (review.completed) {
             val session = requireNotNull(study.session(userId, review.sessionId))
+            val earnedXp = calculateFlashcardXp(
+                reviewedCardCount = study.sessionReviewCount(userId, review.sessionId), completed = true)
             study.finish(userId, review.sessionId, "COMPLETED", review.reviewedAt,
-                review.activeDurationMs.coerceIn(0, review.reviewedAt - session.startedAt), review.earnedXp)
+                review.activeDurationMs.coerceIn(0, review.reviewedAt - session.startedAt), earnedXp)
         }
     }
 

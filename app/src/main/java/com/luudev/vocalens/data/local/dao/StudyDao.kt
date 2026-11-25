@@ -14,6 +14,8 @@ abstract class StudyDao {
     abstract fun observeReviews(uid: String): Flow<List<VocabularyReviewEntity>>
     @Query("SELECT * FROM study_sessions WHERE userId = :uid AND sessionId = :id")
     abstract suspend fun session(uid: String, id: String): StudySessionEntity?
+    @Query("SELECT COUNT(*) FROM vocabulary_reviews WHERE userId = :uid AND sessionId = :id")
+    abstract suspend fun sessionReviewCount(uid: String, id: String): Int
     @Insert(onConflict = OnConflictStrategy.IGNORE) protected abstract suspend fun insertSession(value: StudySessionEntity): Long
     @Query("SELECT COUNT(*) FROM study_sessions WHERE userId = :uid AND status = 'ACTIVE'")
     protected abstract suspend fun activeCount(uid: String): Int

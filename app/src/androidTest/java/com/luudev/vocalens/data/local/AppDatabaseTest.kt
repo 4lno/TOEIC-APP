@@ -126,7 +126,7 @@ class AppDatabaseTest {
         save()
         val repository = LocalFlashcardRepositoryImpl(db)
         repository.start("A", "flash", 1000)
-        val event = FlashcardReview("flash", "book", FlashcardRating.GOOD, 2000, 1000, 1000, true, 5)
+        val event = FlashcardReview("flash", "book", FlashcardRating.GOOD, 2000, 1000, 1000, true)
         repository.review("A", event)
         repository.review("A", event)
         assertEquals(1, db.studyDao().observeReviews("A").first().size)
@@ -139,15 +139,36 @@ class AppDatabaseTest {
         assertEquals(0, LocalLearningStatistics(db.statisticsDao(), db.studyDao()).observe("B").first().totalXp)
     }
 
+    @Test fun flashcardXpUsesPersistedSessionReviewsRegardlessOfRating() = runBlocking {
+        save()
+        LocalVocabularyRepositoryImpl(db.vocabularyDao()).saveWord("A", word.copy(id = "phone"))
+        val repository = LocalFlashcardRepositoryImpl(db)
+        repository.start("A", "flash", 1000)
+        val first = FlashcardReview("flash", "book", FlashcardRating.AGAIN, 1500, 500, 500, false)
+        repository.review("A", first)
+        repository.review("A", first)
+        assertEquals(0, db.studyDao().session("A", "flash")!!.earnedXp)
+        val last = FlashcardReview("flash", "phone", FlashcardRating.HARD, 2000, 500, 1000, true)
+        repository.review("A", last)
+        repository.review("A", last)
+        assertEquals(2, db.studyDao().sessionReviewCount("A", "flash"))
+        assertEquals(10, db.studyDao().session("A", "flash")!!.earnedXp)
+
+        repository.start("A", "next", 3000)
+        repository.review("A", first.copy(sessionId = "next", reviewedAt = 3500, completed = true))
+        assertEquals(5, db.studyDao().session("A", "next")!!.earnedXp)
+        assertEquals(15, LocalLearningStatistics(db.statisticsDao(), db.studyDao()).observe("A").first().totalXp)
+    }
+
     @Test fun flashcardInvalidCompletionRollsBackReviewAndInterruptedSessionCanRestart() = runBlocking {
         save()
         val repository = LocalFlashcardRepositoryImpl(db)
         repository.start("A", "old", 1000)
-        val event = FlashcardReview("old", "book", FlashcardRating.HARD, 2000, 1000, 1000, true, -1)
+        val event = FlashcardReview("old", "book", FlashcardRating.HARD, 2000, -1, 1000, true)
         mustFail { repository.review("A", event) }
         assertTrue(db.studyDao().observeReviews("A").first().isEmpty())
         assertEquals("ACTIVE", db.studyDao().session("A", "old")!!.status)
-        repository.review("A", event.copy(completed = false, earnedXp = 0))
+        repository.review("A", event.copy(completed = false, responseDurationMs = 1000))
         repository.start("A", "new", 3000)
         assertEquals("ABANDONED", db.studyDao().session("A", "old")!!.status)
         assertEquals(0, db.studyDao().session("A", "old")!!.earnedXp)
