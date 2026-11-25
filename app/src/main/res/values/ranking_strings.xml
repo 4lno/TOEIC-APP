@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ranking_title">Bảng xếp hạng</string>
+    <string name="ranking_subtitle">Top 50 · Tổng XP đã xác nhận</string>
+    <string name="ranking_my_xp">XP xếp hạng của bạn</string>
+    <string name="ranking_xp">%1$d XP</string>
+    <string name="ranking_you">%1$s (Bạn)</string>
+    <string name="ranking_back">Quay lại</string>
+    <string name="ranking_retry">Thử lại / Đồng bộ</string>
+    <string name="ranking_empty">Chưa có người học trên bảng xếp hạng. Hoàn thành lượt ôn để bắt đầu!</string>
+    <string name="ranking_error">Chưa tải được bảng xếp hạng. Kiểm tra kết nối rồi thử lại.</string>
+    <string name="ranking_cached">Đang hiển thị dữ liệu đã lưu. Thứ hạng sẽ cập nhật khi kết nối lại.</string>
+    <string name="ranking_pending">%1$d lượt ôn đang chờ đồng bộ XP.</string>
+    <string name="ranking_rejected">%1$d lượt ôn không được server chấp nhận để xếp hạng. XP cá nhân trên máy vẫn được giữ.</string>
+    <string name="ranking_note">Chỉ tính các lượt ôn được server chấp nhận kể từ khi bật đồng bộ. Người có cùng XP sẽ cùng hạng.</string>
+</resources>

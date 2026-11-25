@@ -19,6 +19,9 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        val emulatorHost = providers.gradleProperty("firebaseEmulatorHost").orElse("").get()
+        require(emulatorHost.matches(Regex("[a-zA-Z0-9.:-]*")))
+        buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"$emulatorHost\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -36,11 +39,13 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     androidResources {
         noCompress += "tflite"
     }
+    sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
 }
 
 dependencies {
@@ -52,6 +57,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.functions)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.kotlinx.coroutines.play.services)
     testImplementation(libs.kotlinx.coroutines.test)
     implementation(platform(libs.androidx.compose.bom))

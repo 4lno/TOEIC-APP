@@ -39,13 +39,13 @@ class AppDatabaseTest {
     private fun review(uid: String = "A", id: String = "review") = VocabularyReviewEntity(
         uid, id, "session", "book", "QUIZ", isCorrect = true, reviewedAt = 1500)
 
-    @Test fun schemaContainsTenTablesAndRealForeignKeys() = runBlocking {
+    @Test fun schemaContainsLearningAndXpOutboxTablesAndRealForeignKeys() = runBlocking {
         val tables = mutableSetOf<String>()
         db.openHelper.readableDatabase.query("SELECT name FROM sqlite_master WHERE type='table'").use {
             while (it.moveToNext()) tables.add(it.getString(0))
         }
         assertTrue(tables.containsAll(setOf("users", "user_settings", "vocabulary", "user_vocabulary", "collections",
-            "collection_items", "lessons", "user_lesson_progress", "study_sessions", "vocabulary_reviews")))
+            "collection_items", "lessons", "user_lesson_progress", "study_sessions", "vocabulary_reviews", "xp_sync")))
         mustFail { save("unknown") }
     }
 
@@ -134,6 +134,11 @@ class AppDatabaseTest {
         val session = db.studyDao().session("A", "flash")!!
         assertEquals("COMPLETED", session.status)
         assertEquals(5, session.earnedXp)
+        assertEquals(listOf("flash"), db.xpSyncDao().pending("A").map { it.sessionId })
+        assertTrue(db.xpSyncDao().pending("B").isEmpty())
+        db.xpSyncDao().mark("A", "flash", "SYNCED")
+        repository.review("A", event)
+        assertTrue(db.xpSyncDao().pending("A").isEmpty())
         val stats = LocalLearningStatistics(db.statisticsDao(), db.studyDao()).observe("A").first()
         assertEquals(5, stats.totalXp)
         assertEquals(0, LocalLearningStatistics(db.statisticsDao(), db.studyDao()).observe("B").first().totalXp)
@@ -176,6 +181,7 @@ class AppDatabaseTest {
         assertEquals("ACTIVE", db.studyDao().session("A", "new")!!.status)
         repository.abandon("A", "new", 4000, 1000)
         assertEquals("ABANDONED", db.studyDao().session("A", "new")!!.status)
+        assertTrue(db.xpSyncDao().pending("A").isEmpty())
     }
 
     @Test fun sessionsRejectOverlapAndInvalidAccounting() = runBlocking {

@@ -48,3 +48,15 @@ Desktop.ini
 *.docx
 [Aa][Gg][Ee][Nn][Tt][Ss].[Mm][Dd]
 /docs/
+
+# Firebase local tooling and emulators
+**/node_modules/
+functions/lib/
+functions/venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*

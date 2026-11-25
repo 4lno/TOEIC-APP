@@ -55,7 +55,7 @@ import com.luudev.vocalens.data.repository.LocalProfileRepositoryImpl
 import com.luudev.vocalens.domain.usecase.GetProfile
 import com.luudev.vocalens.domain.usecase.SaveProfile
 import com.luudev.vocalens.presentation.profile.ProfileViewModel
-import com.google.firebase.auth.FirebaseAuth
+import com.luudev.vocalens.data.remote.FirebaseServices
 import com.luudev.vocalens.data.repository.FirebaseAuthRepositoryImpl
 import com.luudev.vocalens.domain.usecase.GetCurrentUserUseCase
 import com.luudev.vocalens.domain.usecase.LoginUseCase
@@ -72,6 +72,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.CancellationException
+import com.luudev.vocalens.data.repository.FirebaseRankingRepository
+import com.luudev.vocalens.data.sync.XpSyncScheduler
+import com.luudev.vocalens.domain.usecase.ObserveRanking
+import com.luudev.vocalens.domain.usecase.RequestXpSync
+import com.luudev.vocalens.presentation.ranking.RankingViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,6 +91,13 @@ class MainActivity : ComponentActivity() {
                 LocalObjectRecognitionRepository(applicationContext))) }
         })[CameraViewModel::class.java]
         val database = VocabLensDatabase.getInstance(applicationContext)
+        val xpSyncScheduler = XpSyncScheduler(applicationContext)
+        val rankingViewModel = ViewModelProvider(this, viewModelFactory {
+            initializer {
+                val repository = FirebaseRankingRepository(FirebaseServices.firestore(), database.xpSyncDao(), xpSyncScheduler)
+                RankingViewModel(ObserveRanking(repository), RequestXpSync(repository))
+            }
+        })[RankingViewModel::class.java]
         val cameraWordViewModel = ViewModelProvider(this, viewModelFactory {
             initializer { CameraWordViewModel(
                 ObserveCollections(LocalCollectionRepositoryImpl(database.collectionDao())),
@@ -94,7 +106,7 @@ class MainActivity : ComponentActivity() {
         })[CameraWordViewModel::class.java]
         val statistics = LocalLearningStatistics(database.statisticsDao(), database.studyDao())
         val synchronizeLocalUser = SynchronizeLocalUser(LocalUserRepositoryImpl(database.userDao()))
-        val authRepository = FirebaseAuthRepositoryImpl(FirebaseAuth.getInstance())
+        val authRepository = FirebaseAuthRepositoryImpl(FirebaseServices.auth())
         val loginViewModel = ViewModelProvider(this, viewModelFactory {
             initializer {
                 LoginViewModel(createSavedStateHandle(), LoginUseCase(authRepository),
@@ -125,7 +137,7 @@ class MainActivity : ComponentActivity() {
         })[CollectionViewModel::class.java]
         val flashcardViewModel = ViewModelProvider(this, viewModelFactory {
             initializer {
-                val repository = LocalFlashcardRepositoryImpl(database)
+                val repository = LocalFlashcardRepositoryImpl(database, syncScheduler = xpSyncScheduler)
                 FlashcardViewModel(GetSavedVocabulary(LocalVocabularyRepositoryImpl(database.vocabularyDao())),
                     StartFlashcards(repository), RateFlashcard(repository), AbandonFlashcards(repository))
             }
@@ -155,6 +167,7 @@ class MainActivity : ComponentActivity() {
                     profileViewModel.onUserChanged(null)
                     practiceViewModel.onUserChanged(null)
                     homeViewModel.onUserChanged(null)
+                    rankingViewModel.onUserChanged(null)
                     if (user != null) {
                         try {
                             synchronizeLocalUser(user)
@@ -165,6 +178,8 @@ class MainActivity : ComponentActivity() {
                             profileViewModel.onUserChanged(user.uid)
                             practiceViewModel.onUserChanged(user.uid)
                             homeViewModel.onUserChanged(user.uid)
+                            rankingViewModel.onUserChanged(user.uid)
+                            xpSyncScheduler.enqueue(user.uid)
                             sessionReady = true
                         } catch (error: CancellationException) { throw error }
                         catch (error: Exception) { sessionError = true }
@@ -207,7 +222,10 @@ class MainActivity : ComponentActivity() {
                         cameraWordViewModel = cameraWordViewModel,
                         practiceViewModel = practiceViewModel,
                         profileViewModel = profileViewModel,
+                        rankingViewModel = rankingViewModel,
                         onLogoutConfirmed = {
+                            user?.uid?.let(xpSyncScheduler::cancel)
+                            rankingViewModel.onUserChanged(null)
                             vocabularyViewModel.onUserChanged(null)
                             collectionViewModel.onUserChanged(null)
                             cameraWordViewModel.onUserChanged(null)

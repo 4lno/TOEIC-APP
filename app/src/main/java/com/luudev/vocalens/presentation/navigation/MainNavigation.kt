@@ -28,6 +28,8 @@ import com.luudev.vocalens.presentation.practice.PracticeScreen
 import com.luudev.vocalens.presentation.practice.PracticeViewModel
 import com.luudev.vocalens.presentation.profile.ProfileScreen
 import com.luudev.vocalens.presentation.profile.ProfileViewModel
+import com.luudev.vocalens.presentation.ranking.RankingViewModel
+import com.luudev.vocalens.presentation.ranking.RankingRoute
 
 /** Hosts main destinations. Screens and the bottom bar only emit navigation events. */
 @Composable
@@ -42,6 +44,7 @@ fun MainNavigation(
     cameraWordViewModel: CameraWordViewModel,
     practiceViewModel: PracticeViewModel,
     profileViewModel: ProfileViewModel,
+    rankingViewModel: RankingViewModel,
     onLogoutConfirmed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -73,6 +76,7 @@ fun MainNavigation(
                         when (action) {
                             HomeAction.Camera -> destination = MainDestination.Camera
                             HomeAction.Profile -> destination = MainDestination.Profile
+                            HomeAction.Ranking -> destination = MainDestination.Ranking
                             HomeAction.Vocabulary -> destination = MainDestination.Vocabulary
                             HomeAction.Flashcards -> {
                                 flashcardViewModel.prepare()
@@ -109,6 +113,7 @@ fun MainNavigation(
                         onDownloadsClick = practiceViewModel::onDownloadsClick,
                         onDismissDownloads = practiceViewModel::onDismissDownloads
                     )
+                    MainDestination.Ranking -> RankingRoute(rankingViewModel, onBack = { destination = MainDestination.Home })
                     MainDestination.Profile -> ProfileScreen(
                         uiState = profileViewModel.uiState,
                         onOpenDialog = profileViewModel::onOpenDialog,

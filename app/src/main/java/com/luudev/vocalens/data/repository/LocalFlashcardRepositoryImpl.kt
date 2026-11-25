@@ -4,13 +4,16 @@ import androidx.room.withTransaction
 import com.luudev.vocalens.data.local.database.VocabLensDatabase
 import com.luudev.vocalens.data.local.entity.StudySessionEntity
 import com.luudev.vocalens.data.local.entity.VocabularyReviewEntity
+import com.luudev.vocalens.data.local.entity.XpSyncEntity
+import com.luudev.vocalens.data.sync.XpSyncScheduler
 import com.luudev.vocalens.domain.model.FlashcardReview
 import com.luudev.vocalens.domain.usecase.CalculateFlashcardXp
 import com.luudev.vocalens.domain.repository.FlashcardRepository
 
 class LocalFlashcardRepositoryImpl(
     private val database: VocabLensDatabase,
-    private val calculateFlashcardXp: CalculateFlashcardXp = CalculateFlashcardXp()
+    private val calculateFlashcardXp: CalculateFlashcardXp = CalculateFlashcardXp(),
+    private val syncScheduler: XpSyncScheduler? = null
 ) : FlashcardRepository {
     private val study = database.studyDao()
 
@@ -22,19 +25,28 @@ class LocalFlashcardRepositoryImpl(
         study.start(StudySessionEntity(userId, sessionId, sessionType = "VOCAB_REVIEW", startedAt = startedAt))
     }
 
-    override suspend fun review(userId: String, review: FlashcardReview) = database.withTransaction {
-        study.recordReview(VocabularyReviewEntity(
-            userId = userId, reviewId = "${review.sessionId}:${review.wordId}",
-            sessionId = review.sessionId, vocabularyId = review.wordId,
-            reviewMode = "SELF_RATED", rating = review.rating.name,
-            responseDurationMs = review.responseDurationMs, reviewedAt = review.reviewedAt
-        ))
+    override suspend fun review(userId: String, review: FlashcardReview) {
+        database.withTransaction {
+            study.recordReview(VocabularyReviewEntity(
+                userId = userId, reviewId = "${review.sessionId}:${review.wordId}",
+                sessionId = review.sessionId, vocabularyId = review.wordId,
+                reviewMode = "SELF_RATED", rating = review.rating.name,
+                responseDurationMs = review.responseDurationMs, reviewedAt = review.reviewedAt
+            ))
+            if (review.completed) {
+                val session = requireNotNull(study.session(userId, review.sessionId))
+                val earnedXp = calculateFlashcardXp(
+                    reviewedCardCount = study.sessionReviewCount(userId, review.sessionId), completed = true)
+                study.finish(userId, review.sessionId, "COMPLETED", review.reviewedAt,
+                    review.activeDurationMs.coerceIn(0, review.reviewedAt - session.startedAt), earnedXp)
+                if (session.status == "ACTIVE") {
+                    database.xpSyncDao().enqueue(XpSyncEntity(userId, review.sessionId))
+                }
+            }
+        }
         if (review.completed) {
-            val session = requireNotNull(study.session(userId, review.sessionId))
-            val earnedXp = calculateFlashcardXp(
-                reviewedCardCount = study.sessionReviewCount(userId, review.sessionId), completed = true)
-            study.finish(userId, review.sessionId, "COMPLETED", review.reviewedAt,
-                review.activeDurationMs.coerceIn(0, review.reviewedAt - session.startedAt), earnedXp)
+            // The durable queue is already committed. Login/retry also schedules it if this fails.
+            runCatching { syncScheduler?.enqueue(userId) }
         }
     }
 

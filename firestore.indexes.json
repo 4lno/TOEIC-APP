@@ -1,0 +1,11 @@
+{
+  "indexes": [{
+    "collectionGroup": "leaderboard",
+    "queryScope": "COLLECTION",
+    "fields": [
+      { "fieldPath": "totalXp", "order": "DESCENDING" },
+      { "fieldPath": "userId", "order": "ASCENDING" }
+    ]
+  }],
+  "fieldOverrides": []
+}
