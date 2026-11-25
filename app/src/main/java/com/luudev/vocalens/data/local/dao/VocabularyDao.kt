@@ -11,7 +11,7 @@ abstract class VocabularyDao {
     abstract fun observeWords(userId: String): Flow<List<VocabularyEntity>>
     @Insert(onConflict = OnConflictStrategy.IGNORE) protected abstract suspend fun insertContent(word: VocabularyEntity)
     @Query("SELECT * FROM vocabulary WHERE vocabularyId = :id")
-    protected abstract suspend fun content(id: String): VocabularyEntity?
+    abstract suspend fun content(id: String): VocabularyEntity?
     @Insert(onConflict = OnConflictStrategy.IGNORE) protected abstract suspend fun insertSaved(word: UserVocabularyEntity)
     @Query("SELECT COUNT(*) FROM vocabulary_reviews WHERE userId = :uid AND vocabularyId = :id")
     protected abstract suspend fun reviewCount(uid: String, id: String): Int

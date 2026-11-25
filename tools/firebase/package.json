@@ -2,6 +2,7 @@
   "name": "vocablens-ranking-tooling",
   "private": true,
   "scripts": {
+    "test:library": "firebase emulators:exec --project demo-vocablens --only auth,firestore \"node --test test/library.test.cjs\"",
     "test:emulator": "firebase emulators:exec --project demo-vocablens --only auth,firestore,functions \"node --test test/emulator.test.cjs\"",
     "emulators": "firebase emulators:start --project demo-vocablens --only auth,firestore,functions",
     "deploy": "firebase deploy --only functions:ranking,firestore --project vocalens-3c76f"

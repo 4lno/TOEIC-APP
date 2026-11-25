@@ -89,7 +89,7 @@ fun MainNavigation(
                     }, onDismissAction = onDismissHomeAction)
                     MainDestination.Vocabulary -> VocabularyRoute(vocabularyViewModel, collectionViewModel,
                         onStartFlashcards = {
-                            flashcardViewModel.prepare(vocabularyViewModel.uiState.category)
+                            flashcardViewModel.prepare()
                             flashcardOrigin = MainDestination.Vocabulary
                             destination = MainDestination.Flashcards
                         },

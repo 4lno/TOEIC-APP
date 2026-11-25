@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="flashcard_title">Flashcards</string>
+    <string name="flashcard_no_collections">Bạn chưa tạo bộ sưu tập. Hãy tạo trong sổ từ vựng để ôn theo từng bộ.</string>
     <string name="flashcard_intro">Nhớ lại đáp án, lật thẻ rồi chọn mức độ ghi nhớ. Mỗi thẻ là một bước tiến nhỏ.</string>
     <string name="flashcard_count">%1$d thẻ để ôn</string>
     <string name="flashcard_shuffle">Trộn thứ tự thẻ</string>
@@ -30,7 +31,7 @@
     <string name="flashcard_study_subtitle">Tập trung vào từng từ</string>
     <string name="flashcard_result_subtitle">Nhìn lại lượt ôn của bạn</string>
     <string name="flashcard_setup_title">Sẵn sàng ôn từ?</string>
-    <string name="flashcard_choose_group">Bạn muốn ôn nhóm nào?</string>
+    <string name="flashcard_choose_group">Chọn từ vựng để ôn</string>
     <string name="flashcard_group_count">%1$d thẻ</string>
     <string name="flashcard_options">Cách ôn tập</string>
     <string name="flashcard_shuffle_hint">Đổi thứ tự để tránh học thuộc vị trí</string>

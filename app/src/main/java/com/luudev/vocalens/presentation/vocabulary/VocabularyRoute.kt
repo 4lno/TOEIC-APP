@@ -2,6 +2,10 @@ package com.luudev.vocalens.presentation.vocabulary
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
@@ -101,6 +105,19 @@ fun VocabularyRoute(viewModel: VocabularyViewModel, collectionViewModel: Collect
                 Tab(selected = collectionsSelected, onClick = { collectionsSelected = true },
                     enabled = !collectionViewModel.uiState.busy,
                     text = { Text(stringResource(R.string.collection_tab)) })
+            }
+            viewModel.uiState.librarySyncStatus?.let { status ->
+                Surface(color = KoiColors.Surface) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(when {
+                            status.error -> R.string.library_sync_error
+                            status.pending > 0 -> R.string.library_sync_pending
+                            else -> R.string.library_sync_hint
+                        }, status.pending), modifier = Modifier.weight(1f), color = KoiColors.Muted,
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = viewModel::onSyncLibrary) { Text(stringResource(R.string.library_sync_action)) }
+                    }
+                }
             }
             if (collectionsSelected) CollectionsScreen(collectionViewModel.uiState, collectionViewModel::onEvent,
                 onBack = { collectionsSelected = false }, modifier = Modifier.weight(1f))

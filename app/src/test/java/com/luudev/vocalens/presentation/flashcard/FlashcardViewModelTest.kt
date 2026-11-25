@@ -3,11 +3,13 @@ package com.luudev.vocalens.presentation.flashcard
 import com.luudev.vocalens.domain.model.*
 import com.luudev.vocalens.domain.repository.FlashcardRepository
 import com.luudev.vocalens.domain.repository.VocabularyRepository
+import com.luudev.vocalens.domain.repository.CollectionRepository
 import com.luudev.vocalens.domain.usecase.*
 import com.luudev.vocalens.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -21,6 +23,19 @@ class FlashcardViewModelTest {
     private val phone = VocabularyWord("phone", "Phone", "", "Điện thoại", VocabularyCategory.Technology)
     private var clock = 1000L
     private val words = MutableStateFlow(listOf(book, phone))
+    private val groups = MutableStateFlow(listOf(VocabularyCollection("books", "Sách của tôi", wordCount = 1),
+        VocabularyCollection("empty", "Bộ rỗng")))
+    private val membership = MutableStateFlow(listOf(book))
+    private val collections = object : CollectionRepository {
+        override fun observeCollections(userId: String) = if (userId == "A") groups else flowOf(emptyList())
+        override fun observeWords(userId: String, collectionId: String) =
+            if (userId == "A" && collectionId == "books") membership else flowOf(emptyList())
+        override suspend fun create(userId: String, name: String, description: String) = Unit
+        override suspend fun update(userId: String, collectionId: String, name: String, description: String) = Unit
+        override suspend fun delete(userId: String, collectionId: String) = Unit
+        override suspend fun setWords(userId: String, collectionId: String, wordIds: Set<String>) = Unit
+        override suspend fun removeWord(userId: String, collectionId: String, wordId: String) = Unit
+    }
     private val vocabulary = object : VocabularyRepository {
         override fun observeSavedWords(userId: String) = words
         override suspend fun saveWord(userId: String, word: VocabularyWord) = Unit
@@ -44,14 +59,16 @@ class FlashcardViewModelTest {
         }
     }
     private fun vm(repo: Repository) = FlashcardViewModel(GetSavedVocabulary(vocabulary),
-        StartFlashcards(repo), RateFlashcard(repo), AbandonFlashcards(repo), now = { clock }, monotonic = { clock })
+        StartFlashcards(repo), RateFlashcard(repo), AbandonFlashcards(repo),
+        ObserveCollections(collections), ObserveCollectionWords(collections), now = { clock }, monotonic = { clock })
         .apply { onUserChanged("A"); setShuffled(false); setForeground(true) }
 
-    @Test fun categoryAndRevealAreRequiredBeforeRatingAndFinalReviewCompletes() = runTest {
+    @Test fun collectionAndRevealAreRequiredBeforeRatingAndFinalReviewCompletes() = runTest {
         val repo = Repository()
         val vm = vm(repo)
         runCurrent()
-        vm.selectCategory(VocabularyCategory.Objects)
+        vm.selectCollection("books")
+        runCurrent()
         vm.start()
         runCurrent()
         assertEquals(listOf(book), vm.uiState.cards)
@@ -119,7 +136,7 @@ class FlashcardViewModelTest {
     @Test fun backgroundTimeDoesNotEarnStudyMinutesAndSameUserKeepsSession() = runTest {
         val repo = Repository()
         val vm = vm(repo)
-        runCurrent(); vm.selectCategory(VocabularyCategory.Objects); vm.start(); runCurrent()
+        runCurrent(); vm.selectCollection("books"); runCurrent(); vm.start(); runCurrent()
         clock += 100
         vm.setForeground(false)
         clock += 60_000
@@ -171,5 +188,42 @@ class FlashcardViewModelTest {
         runCurrent(); vm.start(); runCurrent()
         assertTrue(repo.starts.isEmpty())
         assertEquals(FlashcardStage.Setup, vm.uiState.stage)
+    }
+
+    @Test fun allSavedWordsAndCollectionMembershipAreSeparateAndReactToEdits() = runTest {
+        val repo = Repository()
+        val vm = vm(repo)
+        runCurrent()
+        assertEquals(listOf(book, phone), vm.uiState.deck)
+        vm.selectCollection("books")
+        vm.start() // A tap before membership is loaded must not start an old deck.
+        assertTrue(repo.starts.isEmpty())
+        runCurrent()
+        assertEquals(listOf(book), vm.uiState.deck)
+        membership.value = listOf(phone) // Membership wins even when the category differs.
+        runCurrent()
+        assertEquals(listOf(phone), vm.uiState.deck)
+        vm.selectCollection(null)
+        assertEquals(listOf(book, phone), vm.uiState.deck)
+        vm.start(); runCurrent()
+        assertEquals(listOf(book, phone), vm.uiState.cards)
+    }
+
+    @Test fun emptyOrDeletedCollectionCannotStartAndSwitchingAccountClearsSelection() = runTest {
+        val repo = Repository()
+        val vm = vm(repo)
+        runCurrent()
+        vm.selectCollection("empty"); runCurrent(); vm.start()
+        assertTrue(repo.starts.isEmpty())
+        vm.selectCollection("books"); runCurrent()
+        groups.value = emptyList(); runCurrent()
+        assertTrue(vm.uiState.deck.isEmpty())
+        vm.start(); runCurrent()
+        assertTrue(repo.starts.isEmpty())
+        vm.onUserChanged("B")
+        assertNull(vm.uiState.collectionId)
+        assertTrue(vm.uiState.collections.isEmpty())
+        runCurrent()
+        assertTrue(vm.uiState.collections.isEmpty())
     }
 }

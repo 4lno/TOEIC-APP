@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.debounce
 import com.luudev.vocalens.domain.model.VocabularyCategory
 import com.luudev.vocalens.domain.model.VocabularySort
 import com.luudev.vocalens.domain.model.VocabularyWord
@@ -20,6 +21,9 @@ import com.luudev.vocalens.domain.usecase.SaveVocabularyWord
 import com.luudev.vocalens.domain.model.DictionaryEntry
 import com.luudev.vocalens.domain.model.DictionaryError
 import com.luudev.vocalens.domain.model.DictionaryException
+import com.luudev.vocalens.domain.model.LibrarySyncStatus
+import com.luudev.vocalens.domain.usecase.RequestLibrarySync
+import com.luudev.vocalens.domain.usecase.ObserveLibrarySync
 
 data class VocabularyUiState(
     val savedWords: List<VocabularyWord> = emptyList(),
@@ -32,16 +36,20 @@ data class VocabularyUiState(
     val lookupResults: List<DictionaryEntry> = emptyList(),
     val lookupLoading: Boolean = false,
     val lookupError: DictionaryError? = null,
-    val savingWordId: String? = null
+    val savingWordId: String? = null,
+    val librarySyncStatus: LibrarySyncStatus? = null
 )
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class VocabularyViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val getSavedVocabulary: GetSavedVocabulary,
     private val deleteVocabularyWord: DeleteVocabularyWord,
     private val lookupVocabulary: LookupVocabulary,
     private val saveVocabularyWord: SaveVocabularyWord,
-    private val filterVocabulary: FilterVocabulary = FilterVocabulary()
+    private val filterVocabulary: FilterVocabulary = FilterVocabulary(),
+    private val requestLibrarySync: RequestLibrarySync? = null,
+    private val observeLibrarySync: ObserveLibrarySync? = null
 ) : ViewModel() {
     var uiState by mutableStateOf(VocabularyUiState(
         query = savedStateHandle[QUERY] ?: "",
@@ -56,6 +64,16 @@ class VocabularyViewModel(
     private var deleteJob: Job? = null
     private var lookupJob: Job? = null
     private var saveJob: Job? = null
+    private var syncStatusJob: Job? = null
+    private var lastSyncRequest = 0L
+
+    fun onSyncLibrary() {
+        val uid = userId ?: return
+        val now = System.nanoTime()
+        if (lastSyncRequest != 0L && now - lastSyncRequest < 5_000_000_000L) return
+        lastSyncRequest = now
+        requestLibrarySync?.invoke(uid)
+    }
 
     fun onUserChanged(newUserId: String?) {
         val next = newUserId?.takeIf { it.isNotBlank() }
@@ -64,6 +82,8 @@ class VocabularyViewModel(
         deleteJob?.cancel()
         lookupJob?.cancel()
         saveJob?.cancel()
+        syncStatusJob?.cancel()
+        lastSyncRequest = 0L
         userId = next
         val sameOwner = savedStateHandle.get<String>(OWNER) == next
         if (!sameOwner) {
@@ -74,8 +94,18 @@ class VocabularyViewModel(
         savedStateHandle[OWNER] = next
         uiState = if (sameOwner) uiState.copy(savedWords = emptyList(), visibleWords = emptyList(),
             pendingDeletion = null, storageError = false, lookupResults = emptyList(),
-            lookupLoading = false, lookupError = null, savingWordId = null) else VocabularyUiState()
+            lookupLoading = false, lookupError = null, savingWordId = null, librarySyncStatus = null) else VocabularyUiState()
         if (next == null) return
+        syncStatusJob = viewModelScope.launch {
+            var latest = 0L
+            observeLibrarySync?.invoke(next)?.debounce(750)?.collect { status ->
+                if (userId == next) {
+                    uiState = uiState.copy(librarySyncStatus = status)
+                    if (status.pendingVersion > latest) requestLibrarySync?.invoke(next)
+                    latest = status.pendingVersion
+                }
+            }
+        }
         wordsJob = viewModelScope.launch {
             try {
                 getSavedVocabulary(next).collect { words ->

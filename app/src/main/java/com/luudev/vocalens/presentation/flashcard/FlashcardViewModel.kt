@@ -11,13 +11,17 @@ import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 
 enum class FlashcardStage { Setup, Studying, Completed }
 
 data class FlashcardUiState(
     val stage: FlashcardStage = FlashcardStage.Setup,
     val availableWords: List<VocabularyWord> = emptyList(),
-    val category: VocabularyCategory? = null,
+    val collections: List<VocabularyCollection> = emptyList(),
+    val collectionId: String? = null,
+    val collectionWords: List<VocabularyWord> = emptyList(),
     val shuffled: Boolean = true,
     val meaningFirst: Boolean = false,
     val cards: List<VocabularyWord> = emptyList(),
@@ -29,7 +33,8 @@ data class FlashcardUiState(
     val error: Boolean = false,
     val showExit: Boolean = false
 ) {
-    val deck get() = availableWords.filter { category == null || it.category == category }
+    val deck get() = if (collectionId == null) availableWords else
+        collectionWords.filter { card -> availableWords.any { it.id == card.id } }
     val current get() = cards.getOrNull(index)
     val remembered get() = ratings.count { it == FlashcardRating.GOOD || it == FlashcardRating.EASY }
     val earnedXp get() = CalculateFlashcardXp()(ratings.size, stage == FlashcardStage.Completed)
@@ -40,6 +45,8 @@ class FlashcardViewModel(
     private val startFlashcards: StartFlashcards,
     private val rateFlashcard: RateFlashcard,
     private val abandonFlashcards: AbandonFlashcards,
+    private val observeCollections: ObserveCollections? = null,
+    private val observeCollectionWords: ObserveCollectionWords? = null,
     private val now: () -> Long = System::currentTimeMillis,
     private val monotonic: () -> Long = { System.nanoTime() / 1_000_000 }
 ) : ViewModel() {
@@ -47,6 +54,9 @@ class FlashcardViewModel(
         private set
     private var owner: String? = null
     private var observation: Job? = null
+    private var collectionObservation: Job? = null
+    private var baseReady = false
+    private var collectionLoading = false
     private var operation: Job? = null
     private var sessionId: String? = null
     private var startedAt = 0L
@@ -60,8 +70,11 @@ class FlashcardViewModel(
     fun onUserChanged(userId: String?) {
         if (owner == userId) return
         observation?.cancel()
+        collectionObservation?.cancel()
         operation?.cancel()
         owner = userId
+        baseReady = false
+        collectionLoading = false
         sessionId = null
         pendingReview = null
         resumedAt = null
@@ -73,33 +86,70 @@ class FlashcardViewModel(
         observation?.cancel()
         observation = viewModelScope.launch {
             try {
-                getSavedVocabulary(userId).collect { words ->
-                    if (owner == userId) uiState = uiState.copy(availableWords = words, loading = false)
+                combine(getSavedVocabulary(userId), observeCollections?.invoke(userId) ?: flowOf(emptyList())) { words, groups ->
+                    words to groups
+                }.collect { (words, groups) ->
+                    if (owner == userId) {
+                        baseReady = true
+                        uiState = uiState.copy(availableWords = words, collections = groups, loading = collectionLoading)
+                        if (uiState.collectionId != null && groups.none { it.id == uiState.collectionId }) {
+                            collectionObservation?.cancel()
+                            collectionLoading = false
+                            uiState = uiState.copy(collectionWords = emptyList(), loading = false)
+                        }
+                    }
                 }
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) { if (owner == userId) uiState = uiState.copy(loading = false, error = true) }
         }
     }
 
-    fun prepare(category: VocabularyCategory? = null) {
+    fun prepare(collectionId: String? = null) {
         if (uiState.stage == FlashcardStage.Studying || uiState.busy) return
-        uiState = uiState.copy(stage = FlashcardStage.Setup, category = category, cards = emptyList(),
+        uiState = uiState.copy(stage = FlashcardStage.Setup, cards = emptyList(),
             ratings = emptyList(), index = 0, revealed = false, showExit = false, error = false)
+        selectCollection(collectionId)
     }
 
-    fun selectCategory(category: VocabularyCategory?) {
-        if (uiState.stage == FlashcardStage.Setup && !uiState.busy) uiState = uiState.copy(category = category)
+    fun selectCollection(collectionId: String?) {
+        if (uiState.stage != FlashcardStage.Setup || uiState.busy) return
+        if (collectionId != null && uiState.collections.none { it.id == collectionId }) return
+        if (collectionId == uiState.collectionId) return
+        collectionObservation?.cancel()
+        collectionLoading = collectionId != null
+        uiState = uiState.copy(collectionId = collectionId, collectionWords = emptyList(),
+            loading = !baseReady || collectionLoading, error = false)
+        if (collectionId != null) owner?.let { observeSelectedCollection(it, collectionId) }
+    }
+
+    private fun observeSelectedCollection(uid: String, id: String) {
+        collectionObservation = viewModelScope.launch {
+            try {
+                (observeCollectionWords?.invoke(uid, id) ?: flowOf(emptyList())).collect { words ->
+                    if (owner == uid && uiState.collectionId == id) {
+                        collectionLoading = false
+                        uiState = uiState.copy(collectionWords = words, loading = !baseReady)
+                    }
+                }
+            } catch (error: CancellationException) { throw error }
+            catch (error: Exception) {
+                if (owner == uid && uiState.collectionId == id) {
+                    collectionLoading = false
+                    uiState = uiState.copy(loading = false, error = true)
+                }
+            }
+        }
     }
     fun setShuffled(value: Boolean) { if (!uiState.busy) uiState = uiState.copy(shuffled = value) }
     fun setMeaningFirst(value: Boolean) { if (!uiState.busy) uiState = uiState.copy(meaningFirst = value) }
 
     fun start(difficultOnly: Boolean = false) {
         val userId = owner ?: return
-        if (uiState.busy || uiState.stage == FlashcardStage.Studying) return
+        if (uiState.busy || uiState.loading || uiState.error || uiState.stage == FlashcardStage.Studying) return
         val words = if (difficultOnly) uiState.cards.filterIndexed { index, _ ->
             uiState.ratings.getOrNull(index) in setOf(FlashcardRating.AGAIN, FlashcardRating.HARD)
         }.filter { card -> uiState.availableWords.any { it.id == card.id } } else uiState.deck
-        if (words.isEmpty()) { prepare(uiState.category); return }
+        if (words.isEmpty()) { prepare(uiState.collectionId); return }
         val cards = if (uiState.shuffled) words.shuffled() else words.toList()
         val id = UUID.randomUUID().toString()
         val at = now()
@@ -153,7 +203,12 @@ class FlashcardViewModel(
     fun retry() {
         val pending = pendingReview
         if (pending != null) rate(pending.rating)
-        else owner?.let { uiState = uiState.copy(loading = true, error = false); observeWords(it) }
+        else owner?.let {
+            uiState = uiState.copy(loading = true, error = false)
+            baseReady = false
+            observeWords(it)
+            uiState.collectionId?.let { id -> collectionObservation?.cancel(); collectionLoading = true; observeSelectedCollection(it, id) }
+        }
     }
 
     fun setForeground(value: Boolean) {

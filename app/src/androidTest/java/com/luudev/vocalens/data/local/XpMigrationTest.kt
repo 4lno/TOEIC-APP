@@ -42,13 +42,19 @@ class XpMigrationTest {
                 old.execSQL("""INSERT INTO study_sessions
                     (userId,sessionId,sessionType,status,startedAt,endedAt,activeDurationMs,earnedXp)
                     VALUES ('A','legacy','VOCAB_REVIEW','COMPLETED',1000,2000,1000,50)""")
+                old.execSQL("""INSERT INTO vocabulary(vocabularyId, english, phonetic, meaningVi, createdAt)
+                    VALUES ('fish', 'fish', '', 'cá', 1)""")
+                old.execSQL("""INSERT INTO user_vocabulary(userId, vocabularyId, learningStatus, savedAt, reviewCount, correctCount, updatedAt)
+                    VALUES ('A', 'fish', 'NEW', 1, 0, 0, 1)""")
                 old.version = 1
             }
             val migrated = Room.databaseBuilder(context, VocabLensDatabase::class.java, name)
-                .addMigrations(VocabLensDatabase.MIGRATION_1_2).build()
+                .addMigrations(VocabLensDatabase.MIGRATION_1_2, VocabLensDatabase.MIGRATION_2_3).build()
             try {
                 assertEquals(50, migrated.studyDao().session("A", "legacy")!!.earnedXp)
                 assertEquals(0, migrated.xpSyncDao().pending("A").size)
+                assertEquals("cá", migrated.vocabularyDao().content("fish")!!.meaningVi)
+                assertEquals(0, migrated.librarySyncDao().pending("A").size)
             } finally {
                 migrated.close()
             }

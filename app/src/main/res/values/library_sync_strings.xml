@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_sync_action">Đồng bộ</string>
+    <string name="library_sync_hint">Đồng bộ từ vựng và bộ sưu tập giữa các thiết bị.</string>
+    <string name="library_sync_pending">%1$d thay đổi đang chờ đồng bộ.</string>
+    <string name="library_sync_error">Chưa đồng bộ được thư viện. Dữ liệu trên máy vẫn được giữ.</string>
+</resources>
