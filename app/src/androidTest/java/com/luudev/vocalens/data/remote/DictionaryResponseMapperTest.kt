@@ -8,6 +8,21 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class DictionaryResponseMapperTest {
+    @Test fun fishKeepsVietnameseMeaningForBothAccentsDespiteUntranslatedSenses() {
+        val results = DictionaryResponseMapper.map("""{
+          "word":"fish","entries":[{"language":{"code":"en"},"partOfSpeech":"noun",
+          "pronunciations":[{"type":"ipa","text":"/fɪʃ/",
+            "tags":["Australia","General American","Received Pronunciation"]}],
+          "senses":[{"definition":"A vertebrate animal that lives in water.",
+            "translations":[{"language":{"code":"vi"},"word":"cá"}]},
+            {"definition":"The flesh of the fish used as food."}]}]
+        }""")
+
+        assertEquals(2, results.size)
+        assertTrue(results.all { it.word.meaning == "cá" })
+        assertEquals("/fɪʃ/", results.first().word.phonetic)
+    }
+
     @Test fun selectsVietnameseAndBritishIpaAndPreservesExample() {
         val json = """{
           "word":"hello","entries":[{"language":{"code":"en"},"partOfSpeech":"interjection",
