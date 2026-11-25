@@ -17,7 +17,6 @@ import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -28,11 +27,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -258,18 +254,7 @@ internal fun RecognitionResults(state: CameraUiState, onRetake: () -> Unit, onRe
             bitmap?.let { image ->
                 Image(image.asImageBitmap(), contentDescription = stringResource(R.string.camera_photo),
                     contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                Canvas(Modifier.fillMaxSize()) {
-                    val scale = min(size.width / image.width, size.height / image.height)
-                    val width = image.width * scale
-                    val height = image.height * scale
-                    val origin = Offset((size.width - width) / 2, (size.height - height) / 2)
-                    state.objects.forEach {
-                        val b = it.bounds
-                        drawRect(Color(0xFF70F3BE), origin + Offset(b.left * width, b.top * height),
-                            Size((b.right - b.left) * width, (b.bottom - b.top) * height),
-                            style = Stroke(2.dp.toPx()))
-                    }
-                }
+                DetectionOverlay(image.width, image.height, state.objects, onWordSelected, Modifier.fillMaxSize())
             }
             if (state.stage == CameraStage.Analyzing) {
                 Column(Modifier.background(Color.Black.copy(alpha = .7f)).padding(20.dp),
