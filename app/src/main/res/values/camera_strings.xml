@@ -11,6 +11,7 @@
     <string name="camera_hint">Hướng camera vào vật bạn muốn quan sát</string>
     <string name="camera_capture">Chụp và nhận diện</string>
     <string name="camera_photo">Ảnh vừa chụp</string>
+    <string name="camera_detection_label">%1$s, độ tin cậy %2$d%%. Chạm để lưu từ.</string>
     <string name="camera_analyzing">Đang nhận diện đồ vật…</string>
     <string name="camera_capture_error">Chưa chụp được ảnh. Hãy thử lại.</string>
     <string name="camera_recognition_error">Chưa thể phân tích ảnh. Hãy thử lại hoặc chụp ảnh khác.</string>
