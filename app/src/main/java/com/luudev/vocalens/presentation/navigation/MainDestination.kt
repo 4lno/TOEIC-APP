@@ -4,6 +4,7 @@ import com.luudev.vocalens.presentation.components.BottomTab
 
 enum class MainDestination(val tab: BottomTab) {
     Home(BottomTab.Home),
+    Ranking(BottomTab.Home),
     Vocabulary(BottomTab.Vocabulary),
     Flashcards(BottomTab.Vocabulary),
     Camera(BottomTab.Camera),

@@ -64,6 +64,11 @@ fun HomeScreen(uiState: HomeUiState, onAction: (HomeAction) -> Unit,
             item { PondBanner() }
             item { StreakCard(dashboard.streakDays) }
             item {
+                OutlinedButton(onClick = { onAction(HomeAction.Ranking) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.ranking_title))
+                }
+            }
+            item {
                 SectionTitle(stringResource(R.string.home_today), stringResource(R.string.home_view_progress)) {
                     onAction(HomeAction.Progress)
                 }
@@ -397,6 +402,7 @@ private fun HomeActionDialog(action: HomeAction, dashboard: Dashboard, onDismiss
         HomeAction.Courses -> R.string.home_continue
         HomeAction.Vocabulary -> R.string.home_nav_vocabulary
         HomeAction.Practice -> R.string.home_nav_practice
+        HomeAction.Ranking -> R.string.ranking_title
     })
     val body = when (action) {
         HomeAction.Notifications -> stringResource(R.string.home_no_notifications)

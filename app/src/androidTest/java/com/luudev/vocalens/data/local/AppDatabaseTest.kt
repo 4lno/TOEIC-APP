@@ -39,13 +39,13 @@ class AppDatabaseTest {
     private fun review(uid: String = "A", id: String = "review") = VocabularyReviewEntity(
         uid, id, "session", "book", "QUIZ", isCorrect = true, reviewedAt = 1500)
 
-    @Test fun schemaContainsTenTablesAndRealForeignKeys() = runBlocking {
+    @Test fun schemaContainsLearningAndXpOutboxTablesAndRealForeignKeys() = runBlocking {
         val tables = mutableSetOf<String>()
         db.openHelper.readableDatabase.query("SELECT name FROM sqlite_master WHERE type='table'").use {
             while (it.moveToNext()) tables.add(it.getString(0))
         }
         assertTrue(tables.containsAll(setOf("users", "user_settings", "vocabulary", "user_vocabulary", "collections",
-            "collection_items", "lessons", "user_lesson_progress", "study_sessions", "vocabulary_reviews")))
+            "collection_items", "lessons", "user_lesson_progress", "study_sessions", "vocabulary_reviews", "xp_sync")))
         mustFail { save("unknown") }
     }
 
@@ -126,7 +126,7 @@ class AppDatabaseTest {
         save()
         val repository = LocalFlashcardRepositoryImpl(db)
         repository.start("A", "flash", 1000)
-        val event = FlashcardReview("flash", "book", FlashcardRating.GOOD, 2000, 1000, 1000, true, 5)
+        val event = FlashcardReview("flash", "book", FlashcardRating.GOOD, 2000, 1000, 1000, true)
         repository.review("A", event)
         repository.review("A", event)
         assertEquals(1, db.studyDao().observeReviews("A").first().size)
@@ -134,20 +134,46 @@ class AppDatabaseTest {
         val session = db.studyDao().session("A", "flash")!!
         assertEquals("COMPLETED", session.status)
         assertEquals(5, session.earnedXp)
+        assertEquals(listOf("flash"), db.xpSyncDao().pending("A").map { it.sessionId })
+        assertTrue(db.xpSyncDao().pending("B").isEmpty())
+        db.xpSyncDao().mark("A", "flash", "SYNCED")
+        repository.review("A", event)
+        assertTrue(db.xpSyncDao().pending("A").isEmpty())
         val stats = LocalLearningStatistics(db.statisticsDao(), db.studyDao()).observe("A").first()
         assertEquals(5, stats.totalXp)
         assertEquals(0, LocalLearningStatistics(db.statisticsDao(), db.studyDao()).observe("B").first().totalXp)
+    }
+
+    @Test fun flashcardXpUsesPersistedSessionReviewsRegardlessOfRating() = runBlocking {
+        save()
+        LocalVocabularyRepositoryImpl(db.vocabularyDao()).saveWord("A", word.copy(id = "phone"))
+        val repository = LocalFlashcardRepositoryImpl(db)
+        repository.start("A", "flash", 1000)
+        val first = FlashcardReview("flash", "book", FlashcardRating.AGAIN, 1500, 500, 500, false)
+        repository.review("A", first)
+        repository.review("A", first)
+        assertEquals(0, db.studyDao().session("A", "flash")!!.earnedXp)
+        val last = FlashcardReview("flash", "phone", FlashcardRating.HARD, 2000, 500, 1000, true)
+        repository.review("A", last)
+        repository.review("A", last)
+        assertEquals(2, db.studyDao().sessionReviewCount("A", "flash"))
+        assertEquals(10, db.studyDao().session("A", "flash")!!.earnedXp)
+
+        repository.start("A", "next", 3000)
+        repository.review("A", first.copy(sessionId = "next", reviewedAt = 3500, completed = true))
+        assertEquals(5, db.studyDao().session("A", "next")!!.earnedXp)
+        assertEquals(15, LocalLearningStatistics(db.statisticsDao(), db.studyDao()).observe("A").first().totalXp)
     }
 
     @Test fun flashcardInvalidCompletionRollsBackReviewAndInterruptedSessionCanRestart() = runBlocking {
         save()
         val repository = LocalFlashcardRepositoryImpl(db)
         repository.start("A", "old", 1000)
-        val event = FlashcardReview("old", "book", FlashcardRating.HARD, 2000, 1000, 1000, true, -1)
+        val event = FlashcardReview("old", "book", FlashcardRating.HARD, 2000, -1, 1000, true)
         mustFail { repository.review("A", event) }
         assertTrue(db.studyDao().observeReviews("A").first().isEmpty())
         assertEquals("ACTIVE", db.studyDao().session("A", "old")!!.status)
-        repository.review("A", event.copy(completed = false, earnedXp = 0))
+        repository.review("A", event.copy(completed = false, responseDurationMs = 1000))
         repository.start("A", "new", 3000)
         assertEquals("ABANDONED", db.studyDao().session("A", "old")!!.status)
         assertEquals(0, db.studyDao().session("A", "old")!!.earnedXp)
@@ -155,6 +181,7 @@ class AppDatabaseTest {
         assertEquals("ACTIVE", db.studyDao().session("A", "new")!!.status)
         repository.abandon("A", "new", 4000, 1000)
         assertEquals("ABANDONED", db.studyDao().session("A", "new")!!.status)
+        assertTrue(db.xpSyncDao().pending("A").isEmpty())
     }
 
     @Test fun sessionsRejectOverlapAndInvalidAccounting() = runBlocking {

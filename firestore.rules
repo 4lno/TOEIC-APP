@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /leaderboard/{uid} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.query.limit != null && request.query.limit <= 50;
+      allow write: if false;
+    }
+    // Session receipts are private to the backend. The app receives a callable response.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

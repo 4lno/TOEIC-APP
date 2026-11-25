@@ -9,6 +9,5 @@ data class FlashcardReview(
     val reviewedAt: Long,
     val responseDurationMs: Long,
     val activeDurationMs: Long,
-    val completed: Boolean,
-    val earnedXp: Int
+    val completed: Boolean
 )

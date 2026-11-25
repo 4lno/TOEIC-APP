@@ -12,7 +12,7 @@ import com.luudev.vocalens.domain.model.Dashboard
 import com.luudev.vocalens.domain.model.UserProfile
 import com.luudev.vocalens.domain.usecase.GetDashboard
 
-enum class HomeAction { Notifications, Profile, Progress, Flashcards, Camera, Listening, Pronunciation, Courses, Vocabulary, Practice }
+enum class HomeAction { Notifications, Profile, Progress, Flashcards, Camera, Listening, Pronunciation, Courses, Vocabulary, Practice, Ranking }
 
 data class HomeUiState(val dashboard: Dashboard = Dashboard(), val selectedAction: HomeAction? = null, val storageError: Boolean = false)
 

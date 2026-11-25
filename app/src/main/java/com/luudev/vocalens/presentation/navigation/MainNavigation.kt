@@ -6,6 +6,8 @@ import com.luudev.vocalens.presentation.flashcard.FlashcardViewModel
 import androidx.activity.compose.BackHandler
 import com.luudev.vocalens.presentation.camera.CameraRoute
 import com.luudev.vocalens.presentation.camera.CameraViewModel
+import com.luudev.vocalens.presentation.camera.CameraWordViewModel
+import com.luudev.vocalens.presentation.camera.CameraWordDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -26,6 +28,8 @@ import com.luudev.vocalens.presentation.practice.PracticeScreen
 import com.luudev.vocalens.presentation.practice.PracticeViewModel
 import com.luudev.vocalens.presentation.profile.ProfileScreen
 import com.luudev.vocalens.presentation.profile.ProfileViewModel
+import com.luudev.vocalens.presentation.ranking.RankingViewModel
+import com.luudev.vocalens.presentation.ranking.RankingRoute
 
 /** Hosts main destinations. Screens and the bottom bar only emit navigation events. */
 @Composable
@@ -37,8 +41,10 @@ fun MainNavigation(
     collectionViewModel: CollectionViewModel,
     flashcardViewModel: FlashcardViewModel,
     cameraViewModel: CameraViewModel,
+    cameraWordViewModel: CameraWordViewModel,
     practiceViewModel: PracticeViewModel,
     profileViewModel: ProfileViewModel,
+    rankingViewModel: RankingViewModel,
     onLogoutConfirmed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -70,6 +76,7 @@ fun MainNavigation(
                         when (action) {
                             HomeAction.Camera -> destination = MainDestination.Camera
                             HomeAction.Profile -> destination = MainDestination.Profile
+                            HomeAction.Ranking -> destination = MainDestination.Ranking
                             HomeAction.Vocabulary -> destination = MainDestination.Vocabulary
                             HomeAction.Flashcards -> {
                                 flashcardViewModel.prepare()
@@ -106,6 +113,7 @@ fun MainNavigation(
                         onDownloadsClick = practiceViewModel::onDownloadsClick,
                         onDismissDownloads = practiceViewModel::onDismissDownloads
                     )
+                    MainDestination.Ranking -> RankingRoute(rankingViewModel, onBack = { destination = MainDestination.Home })
                     MainDestination.Profile -> ProfileScreen(
                         uiState = profileViewModel.uiState,
                         onOpenDialog = profileViewModel::onOpenDialog,
@@ -119,7 +127,9 @@ fun MainNavigation(
                         onSoundChanged = profileViewModel::onSoundChanged,
                         onLogoutConfirmed = onLogoutConfirmed
                     )
-                    MainDestination.Camera -> CameraRoute(cameraViewModel) {
+                    MainDestination.Camera -> CameraRoute(cameraViewModel,
+                        onWordSelected = cameraWordViewModel::selectWord,
+                        wordEditor = { CameraWordDialog(cameraWordViewModel) }) {
                         destination = MainDestination.Home
                     }
                 }
