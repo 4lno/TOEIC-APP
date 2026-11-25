@@ -9,10 +9,10 @@ Backend tách `domain/` (model, validation, quy tắc XP), `application/` (use c
 ## Luồng XP
 
 1. Khi hoàn thành flashcard, Android lưu XP cá nhân và bản ghi `xp_sync` trong cùng transaction Room.
-2. WorkManager gửi các phiên chờ theo thứ tự thời gian khi có mạng và đúng tài khoản đăng nhập. Đăng nhập, hoàn thành phiên hoặc nút đồng bộ đều có thể lên lịch gửi.
+2. WorkManager gửi các phiên chờ theo thứ tự thời gian khi có mạng và đúng tài khoản đăng nhập. Đăng nhập, hoàn thành phiên hoặc nút đồng bộ đều có thể lên lịch gửi. Mỗi work request chạy tối đa 3 lần (1 lần đầu + tối đa 2 lần thử lại), chỉ tự retry lỗi mạng/dịch vụ tạm thời. Lỗi đăng nhập, thiếu quyền, sai endpoint hoặc lỗi không rõ nguyên nhân dừng worker; các phiên vẫn PENDING để thử lại sau khi sửa nguyên nhân.
 3. Callable `submitFlashcardSession` lấy UID từ Firebase Auth; `ownerId` trong request chỉ để đối chiếu chủ hàng đợi khi đổi tài khoản. Client không được gửi số XP.
 4. Server kiểm tra phiên/review, tự tính 5 XP/thẻ và ghi biên nhận + tổng XP trong transaction. Một `sessionId` chỉ cộng một lần; retry dữ liệu khác bị từ chối. Các phiên trùng thời gian của cùng user bị từ chối, kể cả phiên được gửi từ thiết bị khác.
-5. Android lắng nghe top 50 và tổng XP của chính mình. Cùng XP thì cùng hạng (1, 1, 3); thứ tự trong nhóm đồng điểm ổn định theo UID.
+5. Android lắng nghe top 50 và tổng XP của chính mình chỉ khi màn hình ranking ở trạng thái RESUMED. Pause, chạy nền hoặc rời màn hình sẽ hủy listener; resume chỉ nối lại listener, không tự lên lịch đồng bộ mới. Nút đồng bộ được giới hạn một lần mỗi 5 giây và không tạo lại listener đang hoạt động tốt. Cùng XP thì cùng hạng (1, 1, 3); thứ tự trong nhóm đồng điểm ổn định theo UID.
 
 `leaderboard/{uid}` chỉ chứa `userId`, `displayName`, `totalXp`, `updatedAt`, không chứa email. Tên được lấy từ Firebase Auth. Biên nhận `xpAccounts/{uid}/sessions/{sessionId}` chỉ backend truy cập, lưu hash thay vì toàn bộ từ đã học.
 
@@ -83,7 +83,7 @@ Deploy rules sẽ thay rules mặc định chặn toàn bộ bằng rules trong 
 ## Giới hạn và vận hành
 
 - Payload một phiên: 1–5000 từ khác nhau, rating hợp lệ, thời gian tăng hợp lệ, phiên tối đa 24 giờ, không quá 5 phút trong tương lai. Server chấp nhận phiên offline cũ nếu không chồng lên phiên đã nhận. Giờ thiết bị sai hoặc phiên không hợp lệ có thể bị từ chối.
-- Phiên bị từ chối vĩnh viễn hiển thị trong màn ranking; lỗi kết nối giữ PENDING để WorkManager thử lại. Không tự xóa phiên chưa gửi hoặc cộng lại XP cá nhân sau khi server trả kết quả.
+- Phiên bị từ chối vĩnh viễn hiển thị trong màn ranking; lỗi kết nối giữ PENDING để WorkManager thử lại trong giới hạn trên. Hết số lần tự thử, người dùng có thể chọn đồng bộ sau khi kết nối/cấu hình đã được sửa. Không tự xóa phiên chưa gửi hoặc cộng lại XP cá nhân sau khi server trả kết quả.
 - Backend xác minh cấu trúc/tính nhất quán và chống cộng trùng, chưa chứng minh người dùng thực sự học. Flashcard là tự đánh giá; client bị sửa vẫn có thể tạo các phiên giả hợp lệ. Trước khi dùng XP cho phần thưởng có giá trị, cần cơ chế phiên do server cấp, hạn mức và kiểm tra lạm dụng.
 - App Check chưa bật cưỡng chế (`enforce_app_check=False`) để chưa chặn app hiện tại. Trước khi public, cấu hình Play Integrity/App Check cho Android rồi bật enforcement và kiểm thử lại.
 - Giới hạn 5 function instances giúp kiểm soát tải, không phải hạn mức chi phí. Theo dõi usage và đặt cảnh báo ngân sách khi bật Blaze.
@@ -91,3 +91,40 @@ Deploy rules sẽ thay rules mặc định chặn toàn bộ bằng rules trong 
 - Thư viện backend Python được khai báo trong `requirements.txt`; npm chỉ dùng cho dev tooling/emulator, không được deploy cùng Python function.
 
 Tài liệu: [Callable Functions](https://firebase.google.com/docs/functions/callable), [Firestore listeners](https://firebase.google.com/docs/firestore/query-data/listen), [Emulator Suite](https://firebase.google.com/docs/emulator-suite).
+
+## Đồng bộ thư viện cá nhân (Room ↔ Firestore)
+
+Từ vựng và bộ sưu tập đồng bộ trực tiếp bằng Firestore SDK, không gọi Python Cloud Functions. Dữ liệu nằm dưới `users/{uid}/vocabulary/{wordId}`, `users/{uid}/collections/{collectionId}` và `users/{uid}/items/{membershipId}`. Membership lưu phẳng để tải thay đổi theo timestamp mà không phải đọc từng bộ sưu tập. Rules chỉ cho chủ UID truy cập, kiểm tra payload và không cho client ghi XP.
+
+Room nâng từ version 2 lên 3 bằng migration giữ dữ liệu cũ. `LibrarySyncSchema` cài SQLite triggers trong callback `onOpen`: mọi tạo/sửa/xóa thư viện và xóa lan qua foreign key đều ghi `library_sync_queue` cùng transaction. Đọc dữ liệu từ cloud được bọc transaction với cờ `importing`, tránh đưa chính dữ liệu tải về vào hàng đợi. Khi tạo Room database trong test, thêm `.addCallback(LibrarySyncSchema)` để kiểm tra cơ chế này.
+
+WorkManager chạy khi đăng nhập, có thay đổi local (gom sự kiện trong 750 ms), hoặc bấm **Đồng bộ** ở màn từ vựng/bộ sưu tập. Không có polling định kỳ hoặc listener Firestore chạy nền. Tự retry tối đa 2 lần với lỗi Firestore tạm thời; lỗi quyền/cấu hình giữ hàng đợi để người dùng thử lại sau. Đăng xuất hủy work; worker kiểm tra UID trước mỗi giai đoạn. Gửi xong mới xác nhận đúng sequence, nên thay đổi local mới phát sinh trong lúc gửi không bị xóa nhầm.
+
+Lần đầu tự đưa thư viện cũ vào hàng đợi. Sau đó gom thay đổi theo document, ghi batch tối đa 100 bản ghi, tải tăng dần theo `serverUpdatedAt` do server cấp, phân trang 100 bản ghi. Tải lặp mốc timestamp cuối để không bỏ qua bản ghi có cùng thời gian. Dấu xóa (`deleted: true`) được giữ trên cloud để truyền việc xóa sang thiết bị khác, không tự dọn bằng TTL. Đồng bộ vẫn sử dụng lượt đọc/ghi Firestore; mỗi lần yêu cầu có thể đọc lại các bản ghi tại mốc cuối, dù không có dữ liệu mới.
+
+Quy tắc xung đột: thao tác local đang chờ được gửi trước; với cùng document, bản ghi được server nhận sau cùng thắng. Không dựa vào đồng hồ thiết bị để phân xử. Thư viện có thể hợp nhất các từ/bộ sưu tập khác ID; không hợp nhất nội dung hai bản sửa cùng một bộ sưu tập. Lịch sử ôn, tiến độ học, profile và XP cá nhân cũ không thuộc phạm vi đồng bộ thư viện. Xóa từ đang có lượt ôn hoạt động sẽ được hoãn bởi ràng buộc Room; hoàn thành lượt ôn rồi bấm Đồng bộ lại.
+
+Chạy test Rules riêng (dừng Emulator đang chạy ở các port tương ứng trước khi dùng):
+
+```powershell
+cd D:\LTDD\tools\firebase
+npm.cmd run test:library
+```
+
+Test Android hai database giả lập hai thiết bị (cần Android emulator đang chạy):
+
+```powershell
+# Terminal 1, từ D:\LTDD: chỉ khởi động dịch vụ local cần cho thư viện
+.\tools\firebase\node_modules\.bin\firebase.cmd emulators:start --project demo-vocablens --only auth,firestore
+# Terminal 2, từ D:\LTDD:
+.\gradlew.bat testDebugUnitTest connectedDebugAndroidTest "-PfirebaseEmulatorHost=10.0.2.2" "-Pandroid.testInstrumentationRunnerArguments.class=com.luudev.vocalens.data.remote.LibrarySyncEmulatorTest,com.luudev.vocalens.data.local.LibraryOutboxTest,com.luudev.vocalens.data.local.XpMigrationTest"
+```
+
+Test dùng project giả `demo-vocablens`; không truy cập Firebase production. Bao phủ dữ liệu cũ chưa có outbox, >100 từ, khôi phục sang Room mới, đổi tên, sửa cùng document từ hai máy, xóa/cascade, đổi tài khoản, rollback transaction và xác nhận sequence cũ.
+
+Sau khi kiểm thử ổn, để dùng production cần cập nhật app và deploy **Firestore Rules** đã sửa. Không cần deploy Python functions cho tính năng thư viện. Chỉ chạy lệnh dưới khi đã chủ động quyết định triển khai:
+
+```powershell
+cd D:\LTDD\tools\firebase
+npx.cmd firebase deploy --only firestore:rules --project vocalens-3c76f
+```

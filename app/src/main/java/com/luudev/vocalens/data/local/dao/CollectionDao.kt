@@ -25,13 +25,16 @@ abstract class CollectionDao {
     protected abstract suspend fun exists(uid: String, id: String): Boolean
     @Query("DELETE FROM collection_items WHERE userId = :uid AND collectionId = :id")
     protected abstract suspend fun clearItems(uid: String, id: String)
+    @Query("SELECT vocabularyId FROM collection_items WHERE userId = :uid AND collectionId = :id")
+    protected abstract suspend fun itemIds(uid: String, id: String): List<String>
     @Transaction
     open suspend fun replaceItems(uid: String, id: String, wordIds: Set<String>, now: Long) {
         check(exists(uid, id)) { "Collection no longer exists" }
         // Foreign keys validate that every selected word is saved by this account.
         // A failed insertion rolls back the deletion as well.
-        clearItems(uid, id)
-        wordIds.forEach { addItem(CollectionItemEntity(uid, id, it, now)) }
+        val existing = itemIds(uid, id).toSet()
+        (existing - wordIds).forEach { removeItem(uid, id, it) }
+        (wordIds - existing).forEach { addItem(CollectionItemEntity(uid, id, it, now)) }
     }
     @Query("SELECT * FROM collections WHERE userId = :uid ORDER BY updatedAt DESC, collectionId")
     abstract fun observeCollections(uid: String): Flow<List<CollectionEntity>>

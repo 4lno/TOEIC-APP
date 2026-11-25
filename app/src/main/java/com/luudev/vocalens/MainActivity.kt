@@ -92,6 +92,9 @@ class MainActivity : ComponentActivity() {
         })[CameraViewModel::class.java]
         val database = VocabLensDatabase.getInstance(applicationContext)
         val xpSyncScheduler = XpSyncScheduler(applicationContext)
+        val librarySyncScheduler = com.luudev.vocalens.data.sync.LibrarySyncScheduler(applicationContext)
+        val librarySyncRepository = com.luudev.vocalens.data.repository.FirebaseLibrarySyncRepository(database,
+            FirebaseServices.firestore(), { FirebaseServices.auth().currentUser?.uid }, librarySyncScheduler)
         val rankingViewModel = ViewModelProvider(this, viewModelFactory {
             initializer {
                 val repository = FirebaseRankingRepository(FirebaseServices.firestore(), database.xpSyncDao(), xpSyncScheduler)
@@ -124,7 +127,9 @@ class MainActivity : ComponentActivity() {
                 val repository = LocalVocabularyRepositoryImpl(database.vocabularyDao())
                 VocabularyViewModel(createSavedStateHandle(), GetSavedVocabulary(repository), DeleteVocabularyWord(repository),
                     com.luudev.vocalens.domain.usecase.LookupVocabulary(com.luudev.vocalens.data.repository.RemoteDictionaryRepositoryImpl()),
-                    com.luudev.vocalens.domain.usecase.SaveVocabularyWord(repository))
+                    com.luudev.vocalens.domain.usecase.SaveVocabularyWord(repository),
+                    requestLibrarySync = com.luudev.vocalens.domain.usecase.RequestLibrarySync(librarySyncRepository),
+                    observeLibrarySync = com.luudev.vocalens.domain.usecase.ObserveLibrarySync(librarySyncRepository))
             }
         })[VocabularyViewModel::class.java]
         val collectionViewModel = ViewModelProvider(this, viewModelFactory {
@@ -139,7 +144,9 @@ class MainActivity : ComponentActivity() {
             initializer {
                 val repository = LocalFlashcardRepositoryImpl(database, syncScheduler = xpSyncScheduler)
                 FlashcardViewModel(GetSavedVocabulary(LocalVocabularyRepositoryImpl(database.vocabularyDao())),
-                    StartFlashcards(repository), RateFlashcard(repository), AbandonFlashcards(repository))
+                    StartFlashcards(repository), RateFlashcard(repository), AbandonFlashcards(repository),
+                    ObserveCollections(LocalCollectionRepositoryImpl(database.collectionDao())),
+                    ObserveCollectionWords(LocalCollectionRepositoryImpl(database.collectionDao())))
             }
         })[FlashcardViewModel::class.java]
         val practiceViewModel = ViewModelProvider(this, viewModelFactory {
@@ -180,6 +187,7 @@ class MainActivity : ComponentActivity() {
                             homeViewModel.onUserChanged(user.uid)
                             rankingViewModel.onUserChanged(user.uid)
                             xpSyncScheduler.enqueue(user.uid)
+                            com.luudev.vocalens.domain.usecase.RequestLibrarySync(librarySyncRepository)(user.uid)
                             sessionReady = true
                         } catch (error: CancellationException) { throw error }
                         catch (error: Exception) { sessionError = true }
@@ -225,6 +233,7 @@ class MainActivity : ComponentActivity() {
                         rankingViewModel = rankingViewModel,
                         onLogoutConfirmed = {
                             user?.uid?.let(xpSyncScheduler::cancel)
+                            user?.uid?.let(librarySyncScheduler::cancel)
                             rankingViewModel.onUserChanged(null)
                             vocabularyViewModel.onUserChanged(null)
                             collectionViewModel.onUserChanged(null)

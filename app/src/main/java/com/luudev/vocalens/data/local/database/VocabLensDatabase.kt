@@ -12,7 +12,7 @@ import com.luudev.vocalens.data.local.entity.*
 @Database(entities = [UserEntity::class, UserSettingsEntity::class, VocabularyEntity::class,
     UserVocabularyEntity::class, CollectionEntity::class, CollectionItemEntity::class,
     LessonEntity::class, UserLessonProgressEntity::class, StudySessionEntity::class,
-    VocabularyReviewEntity::class, XpSyncEntity::class], version = 2, exportSchema = true)
+    VocabularyReviewEntity::class, XpSyncEntity::class, LibrarySyncEntity::class, LibrarySyncCursor::class], version = 3, exportSchema = true)
 abstract class VocabLensDatabase : RoomDatabase() {
     abstract fun vocabularyDao(): VocabularyDao
     abstract fun userDao(): UserDao
@@ -21,8 +21,12 @@ abstract class VocabLensDatabase : RoomDatabase() {
     abstract fun studyDao(): StudyDao
     abstract fun statisticsDao(): StatisticsDao
     abstract fun xpSyncDao(): XpSyncDao
+    abstract fun librarySyncDao(): LibrarySyncDao
 
     companion object {
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) = LibrarySyncSchema.createTables(db)
+        }
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""CREATE TABLE IF NOT EXISTS `xp_sync` (
@@ -37,7 +41,7 @@ abstract class VocabLensDatabase : RoomDatabase() {
         fun getInstance(context: Context): VocabLensDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext, VocabLensDatabase::class.java, "vocab_lens_app.db"
-            ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).addCallback(LibrarySyncSchema).build().also { instance = it }
         }
     }
 }

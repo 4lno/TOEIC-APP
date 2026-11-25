@@ -54,11 +54,11 @@ fun FlashcardRoute(viewModel: FlashcardViewModel, soundEnabled: Boolean, onBack:
     BackHandler { viewModel.requestExit(onBack) }
     Box(Modifier.fillMaxSize()) {
         FlashcardScreen(state, onBack = { viewModel.requestExit(onBack) },
-            onCategory = viewModel::selectCategory, onShuffle = viewModel::setShuffled,
+            onCollection = viewModel::selectCollection, onShuffle = viewModel::setShuffled,
             onReverse = viewModel::setMeaningFirst, onStart = { viewModel.start() },
             onReveal = viewModel::reveal, onRate = viewModel::rate, onRetry = viewModel::retry,
             onDifficult = { viewModel.start(difficultOnly = true) },
-            onSetup = { viewModel.prepare(state.category) }, onOpenVocabulary = onOpenVocabulary,
+            onSetup = { viewModel.prepare(state.collectionId) }, onOpenVocabulary = onOpenVocabulary,
             onSpeak = { word ->
                 val tts = engine
                 when {

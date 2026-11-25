@@ -20,6 +20,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.advanceTimeBy
+import com.luudev.vocalens.domain.model.LibrarySyncStatus
+import com.luudev.vocalens.domain.repository.LibrarySyncRepository
+import com.luudev.vocalens.domain.usecase.ObserveLibrarySync
+import com.luudev.vocalens.domain.usecase.RequestLibrarySync
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -29,6 +34,38 @@ class RoomVocabularyViewModelTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
     private val headphones = VocabularyWord("headphones", "Headphones", "", "Tai nghe", VocabularyCategory.Technology)
     private val notebook = VocabularyWord("notebook", "Notebook", "", "Sổ ghi chép", VocabularyCategory.Objects)
+
+    @Test fun libraryChangesScheduleSyncButErrorStatusDoesNotCreateRetryLoopAndLogoutStopsObservation() = runTest {
+        val repo = repository()
+        val status = MutableStateFlow(LibrarySyncStatus())
+        val requests = mutableListOf<String>()
+        val sync = object : LibrarySyncRepository {
+            override suspend fun synchronize(userId: String) = Unit
+            override fun requestSync(userId: String) { requests += userId }
+            override fun observeStatus(userId: String) = status
+        }
+        val vm = VocabularyViewModel(SavedStateHandle(), GetSavedVocabulary(repo), DeleteVocabularyWord(repo),
+            LookupVocabulary(object : DictionaryRepository {
+                override suspend fun lookup(query: String) = emptyList<DictionaryEntry>()
+            }), SaveVocabularyWord(repo), requestLibrarySync = RequestLibrarySync(sync), observeLibrarySync = ObserveLibrarySync(sync))
+        vm.onUserChanged("A")
+        runCurrent()
+        status.value = LibrarySyncStatus(pending = 1, pendingVersion = 1)
+        advanceTimeBy(751); runCurrent()
+        assertEquals(listOf("A"), requests)
+        status.value = status.value.copy(error = true)
+        advanceTimeBy(751); runCurrent()
+        assertEquals(listOf("A"), requests)
+        assertTrue(vm.uiState.librarySyncStatus!!.error)
+        status.value = status.value.copy(pending = 2, pendingVersion = 2)
+        advanceTimeBy(751); runCurrent()
+        assertEquals(listOf("A", "A"), requests)
+        vm.onUserChanged(null)
+        status.value = status.value.copy(pendingVersion = 3)
+        advanceTimeBy(751); runCurrent()
+        assertNull(vm.uiState.librarySyncStatus)
+        assertEquals(2, requests.size)
+    }
 
     private class FakeRepository : VocabularyRepository {
         val users = mutableMapOf<String, MutableStateFlow<List<VocabularyWord>>>()

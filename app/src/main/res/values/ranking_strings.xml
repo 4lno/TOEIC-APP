@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ranking_title">Bảng xếp hạng</string>
+    <string name="ranking_personal_tab">XP của tôi</string>
+    <string name="ranking_personal_title">XP của bạn</string>
+    <string name="ranking_sync_status">Trạng thái đồng bộ</string>
+    <string name="ranking_pending_label">Lượt ôn đang chờ</string>
+    <string name="ranking_rejected_label">Lượt ôn chưa được chấp nhận</string>
+    <string name="ranking_eyebrow">CÙNG NHAU TIẾN BỘ</string>
+    <string name="ranking_learners">Người học nổi bật</string>
+    <string name="ranking_order">Xếp theo tổng XP</string>
+    <string name="ranking_sync">Đồng bộ</string>
+    <string name="ranking_empty_title">Hành trình bắt đầu từ bạn</string>
+    <string name="ranking_position">Bạn đang ở hạng #%1$d · Top 50</string>
+    <string name="ranking_keep_learning">Tích lũy XP để góp mặt trong Top 50</string>
+    <string name="ranking_you_label">Bạn</string>
     <string name="ranking_subtitle">Top 50 · Tổng XP đã xác nhận</string>
     <string name="ranking_my_xp">XP xếp hạng của bạn</string>
     <string name="ranking_xp">%1$d XP</string>

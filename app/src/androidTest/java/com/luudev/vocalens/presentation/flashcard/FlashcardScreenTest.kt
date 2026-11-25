@@ -23,6 +23,9 @@ import com.luudev.vocalens.data.local.database.VocabLensDatabase
 import com.luudev.vocalens.data.local.entity.UserEntity
 import com.luudev.vocalens.data.repository.LocalFlashcardRepositoryImpl
 import com.luudev.vocalens.data.repository.LocalVocabularyRepositoryImpl
+import com.luudev.vocalens.data.repository.LocalCollectionRepositoryImpl
+import com.luudev.vocalens.data.local.entity.CollectionEntity
+import com.luudev.vocalens.data.local.entity.CollectionItemEntity
 import com.luudev.vocalens.domain.model.*
 import com.luudev.vocalens.domain.usecase.*
 import com.luudev.vocalens.presentation.theme.VocaLensTheme
@@ -53,9 +56,14 @@ class FlashcardScreenTest {
         vocabulary.saveWord("A", VocabularyWord("book", "Book", "/bʊk/", "Quyển sách", VocabularyCategory.Objects,
             partOfSpeech = "noun", exampleSentence = "I read a book every evening before going to bed."))
         val repository = LocalFlashcardRepositoryImpl(db)
+        db.collectionDao().create(CollectionEntity("A", "books", "Sách của tôi", createdAt = 1, updatedAt = 1))
+        db.collectionDao().create(CollectionEntity("A", "empty", "Bộ rỗng", createdAt = 1, updatedAt = 1))
+        db.collectionDao().addItem(CollectionItemEntity("A", "books", "book", 1))
         compose.runOnUiThread {
             vm = FlashcardViewModel(GetSavedVocabulary(vocabulary), StartFlashcards(repository),
-                RateFlashcard(repository), AbandonFlashcards(repository))
+                RateFlashcard(repository), AbandonFlashcards(repository),
+                ObserveCollections(LocalCollectionRepositoryImpl(db.collectionDao())),
+                ObserveCollectionWords(LocalCollectionRepositoryImpl(db.collectionDao())))
             store.put("flashcard", vm)
             vm.onUserChanged("A")
             vm.setForeground(true)
@@ -66,7 +74,7 @@ class FlashcardScreenTest {
                 CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Box(Modifier.size(viewport).testTag("flashcard-viewport")) {
-                            FlashcardScreen(vm.uiState, onBack = {}, onCategory = vm::selectCategory,
+                            FlashcardScreen(vm.uiState, onBack = {}, onCollection = vm::selectCollection,
                                 onShuffle = vm::setShuffled, onReverse = vm::setMeaningFirst,
                                 onStart = { vm.start() }, onReveal = vm::reveal, onRate = vm::rate,
                                 onRetry = vm::retry, onDifficult = { vm.start(true) },
@@ -116,12 +124,27 @@ class FlashcardScreenTest {
         compose.onNodeWithText("Book").assertExists()
     }
 
-    @Test fun optionRowCanBeTappedAndEmptyCategoryOffersVocabulary() {
+    @Test fun optionRowCanBeTappedAndEmptyCollectionOffersVocabulary() {
         compose.onNodeWithText("Đoán từ tiếng Anh").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(vm.uiState.meaningFirst) }
-        compose.onNodeWithText("Du lịch").performScrollTo().performClick()
+        compose.onNodeWithText("Đồ dùng").assertDoesNotExist()
+        compose.onNodeWithText("Công nghệ").assertDoesNotExist()
+        compose.onNodeWithText("Du lịch").assertDoesNotExist()
+        compose.onNodeWithText("Bộ rỗng").performScrollTo().performClick()
+        compose.waitUntil(5_000) { !vm.uiState.loading }
         compose.onNodeWithText("Mở sổ từ vựng").assertIsDisplayed()
         compose.onNodeWithText("Bắt đầu ôn tập").assertDoesNotExist()
+    }
+
+    @Test fun userCollectionCanBeSelectedAndStudied() {
+        compose.onNodeWithText("Sách của tôi").performScrollTo().performClick()
+        compose.waitUntil(5_000) { !vm.uiState.loading }
+        compose.onNodeWithText("Bắt đầu ôn tập").performClick()
+        compose.waitUntil(5_000) { vm.uiState.stage == FlashcardStage.Studying }
+        compose.runOnIdle {
+            assertEquals("books", vm.uiState.collectionId)
+            assertEquals(listOf("book"), vm.uiState.cards.map { it.id })
+        }
     }
 
     @Test fun largeTextAndShortViewportKeepActionsReachable() {

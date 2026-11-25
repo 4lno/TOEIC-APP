@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,7 +33,7 @@ import com.luudev.vocalens.presentation.theme.KoiColors
 @Composable
 fun FlashcardScreen(
     state: FlashcardUiState, onBack: () -> Unit,
-    onCategory: (VocabularyCategory?) -> Unit, onShuffle: (Boolean) -> Unit, onReverse: (Boolean) -> Unit,
+    onCollection: (String?) -> Unit, onShuffle: (Boolean) -> Unit, onReverse: (Boolean) -> Unit,
     onStart: () -> Unit, onReveal: () -> Unit, onRate: (FlashcardRating) -> Unit,
     onRetry: () -> Unit, onDifficult: () -> Unit, onSetup: () -> Unit,
     onOpenVocabulary: () -> Unit, onSpeak: (VocabularyWord) -> Unit
@@ -64,7 +65,7 @@ fun FlashcardScreen(
                     if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     if (state.error) ErrorNotice(state.busy, onRetry)
                     when (state.stage) {
-                        FlashcardStage.Setup -> SetupContent(state, onCategory, onShuffle, onReverse)
+                        FlashcardStage.Setup -> SetupContent(state, onCollection, onShuffle, onReverse)
                         FlashcardStage.Studying -> state.current?.let {
                             StudyCard(it, state.meaningFirst, state.revealed, state.busy, onReveal, onSpeak)
                         }
@@ -96,7 +97,7 @@ private fun StudyProgress(state: FlashcardUiState) {
 }
 
 @Composable
-private fun SetupContent(state: FlashcardUiState, onCategory: (VocabularyCategory?) -> Unit,
+private fun SetupContent(state: FlashcardUiState, onCollection: (String?) -> Unit,
     onShuffle: (Boolean) -> Unit, onReverse: (Boolean) -> Unit) {
     Surface(color = KoiColors.DeepWater, shape = RoundedCornerShape(24.dp)) {
         Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -105,21 +106,22 @@ private fun SetupContent(state: FlashcardUiState, onCategory: (VocabularyCategor
             Text(stringResource(R.string.flashcard_intro), color = KoiColors.Mint, style = MaterialTheme.typography.bodyMedium)
         }
     }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionTitle(stringResource(R.string.flashcard_choose_group))
-        val categories = listOf<VocabularyCategory?>(null) + VocabularyCategory.entries
-        categories.chunked(2).forEach { row ->
+        val decks = listOf(Triple<String?, String, Int>(null, stringResource(R.string.vocabulary_all), state.availableWords.size)) +
+            state.collections.map { Triple(it.id, it.name, it.wordCount) }
+        decks.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { category ->
-                    val selected = category == state.category
-                    val count = state.availableWords.count { category == null || it.category == category }
+                row.forEach { (id, name, count) ->
+                    val selected = id == state.collectionId
                     Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp),
                         color = if (selected) KoiColors.SoftWater else KoiColors.Surface,
                         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) KoiColors.Primary else KoiColors.Outline)) {
                         Column(Modifier.selectable(selected, enabled = !state.busy && !state.loading, role = Role.RadioButton,
-                            onClick = { onCategory(category) }).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            onClick = { onCollection(id) }).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(stringResource(categoryLabel(category)), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                Text(name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f),
+                                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                 if (selected) AppIcon(AppGlyph.Check, KoiColors.Primary, Modifier.size(18.dp))
                             }
                             Text(stringResource(R.string.flashcard_group_count, count), color = KoiColors.Muted,
@@ -127,8 +129,11 @@ private fun SetupContent(state: FlashcardUiState, onCategory: (VocabularyCategor
                         }
                     }
                 }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
+        if (state.collections.isEmpty() && !state.loading) Text(stringResource(R.string.flashcard_no_collections),
+            color = KoiColors.Muted, style = MaterialTheme.typography.bodySmall)
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionTitle(stringResource(R.string.flashcard_options))
@@ -326,12 +331,6 @@ private fun ErrorNotice(busy: Boolean, onRetry: () -> Unit) {
 @Composable
 private fun SectionTitle(text: String) = Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-private fun categoryLabel(category: VocabularyCategory?) = when (category) {
-    null -> R.string.vocabulary_all
-    VocabularyCategory.Objects -> R.string.vocabulary_objects
-    VocabularyCategory.Technology -> R.string.vocabulary_technology
-    VocabularyCategory.Travel -> R.string.vocabulary_travel
-}
 private fun ratingLabel(rating: FlashcardRating) = when (rating) {
     FlashcardRating.AGAIN -> R.string.flashcard_again
     FlashcardRating.HARD -> R.string.flashcard_hard

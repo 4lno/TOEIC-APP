@@ -1,6 +1,56 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function validId(id) { return id is string && id.matches('^[A-Za-z0-9_-]{1,200}$'); }
+    function optionalText(data, key, maximum) {
+      return data[key] == null || (data[key] is string && data[key].size() <= maximum);
+    }
+    function text(value, maximum) { return value is string && value.size() > 0 && value.size() <= maximum; }
+    function common(data) { return data.deleted is bool && data.serverUpdatedAt == request.time; }
+    match /users/{uid}/vocabulary/{id} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && validId(id) && request.resource.data.wordId == id
+        && common(request.resource.data) && (
+          (request.resource.data.deleted == true && request.resource.data.keys().hasOnly(['wordId', 'deleted', 'serverUpdatedAt']))
+          || (request.resource.data.deleted == false
+            && request.resource.data.keys().hasAll(['wordId', 'deleted', 'serverUpdatedAt', 'english', 'phonetic', 'meaning', 'category', 'createdAt', 'savedAt', 'partOfSpeech', 'exampleSentence'])
+            && request.resource.data.keys().hasOnly(['wordId', 'deleted', 'serverUpdatedAt', 'english', 'phonetic', 'meaning', 'category', 'createdAt', 'savedAt', 'partOfSpeech', 'exampleSentence'])
+            && text(request.resource.data.english, 300) && text(request.resource.data.meaning, 2000)
+            && request.resource.data.phonetic is string && request.resource.data.phonetic.size() <= 500
+            && request.resource.data.category in ['Objects', 'Technology', 'Travel']
+            && request.resource.data.createdAt is int && request.resource.data.createdAt >= 0
+            && request.resource.data.savedAt is int && request.resource.data.savedAt >= 0
+            && optionalText(request.resource.data, 'partOfSpeech', 100)
+            && optionalText(request.resource.data, 'exampleSentence', 10000)));
+      allow delete: if false;
+    }
+    match /users/{uid}/collections/{id} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && validId(id) && request.resource.data.collectionId == id
+        && common(request.resource.data) && (
+          (request.resource.data.deleted == true && request.resource.data.keys().hasOnly(['collectionId', 'deleted', 'serverUpdatedAt']))
+          || (request.resource.data.deleted == false
+            && request.resource.data.keys().hasAll(['collectionId', 'deleted', 'serverUpdatedAt', 'name', 'description', 'createdAt', 'updatedAt'])
+            && request.resource.data.keys().hasOnly(['collectionId', 'deleted', 'serverUpdatedAt', 'name', 'description', 'createdAt', 'updatedAt'])
+            && text(request.resource.data.name, 120) && optionalText(request.resource.data, 'description', 2000)
+            && request.resource.data.createdAt is int && request.resource.data.createdAt >= 0
+            && request.resource.data.updatedAt is int && request.resource.data.updatedAt >= 0));
+      allow delete: if false;
+    }
+    // Flat membership documents make incremental download possible without listing every collection.
+    match /users/{uid}/items/{id} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && validId(id)
+        && validId(request.resource.data.collectionId) && validId(request.resource.data.wordId)
+        && common(request.resource.data) && (
+          (request.resource.data.deleted == true && request.resource.data.keys().hasOnly(['collectionId', 'wordId', 'deleted', 'serverUpdatedAt']))
+          || (request.resource.data.deleted == false
+            && request.resource.data.keys().hasAll(['collectionId', 'wordId', 'deleted', 'serverUpdatedAt', 'addedAt'])
+            && request.resource.data.keys().hasOnly(['collectionId', 'wordId', 'deleted', 'serverUpdatedAt', 'addedAt'])
+            && request.resource.data.addedAt is int && request.resource.data.addedAt >= 0));
+      allow delete: if false;
+    }
     match /leaderboard/{uid} {
       allow get: if request.auth != null;
       allow list: if request.auth != null && request.query.limit != null && request.query.limit <= 50;
