@@ -28,7 +28,8 @@ jobs:
 
 
       - name: Install Android SDK 37
-        run: sdkmanager "platforms;android-37"
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37"
 
       - name: Configure Google Services JSON
         env:
