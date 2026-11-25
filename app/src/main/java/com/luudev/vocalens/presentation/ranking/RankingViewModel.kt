@@ -19,28 +19,34 @@ data class RankingUiState(
 
 class RankingViewModel(
     private val observeRanking: ObserveRanking,
-    private val requestXpSync: RequestXpSync
+    private val requestXpSync: RequestXpSync,
+    private val monotonic: () -> Long = { System.nanoTime() / 1_000_000 }
 ) : ViewModel() {
     var uiState by mutableStateOf(RankingUiState())
         private set
     private var owner: String? = null
     private var observation: Job? = null
+    private var screenActive = false
+    private var lastSyncRequestAt: Long? = null
 
     fun onUserChanged(uid: String?) {
         if (owner == uid) return
-        observation?.cancel()
+        stop()
         owner = uid
+        lastSyncRequestAt = null
         uiState = RankingUiState(userId = uid)
         // Subscribe only when the ranking screen is open.
     }
 
     fun start() {
+        screenActive = true
         val uid = owner ?: return
         if (observation?.isActive == true) return
         uiState = uiState.copy(loading = true, error = false)
         observation = viewModelScope.launch {
             try {
-                requestXpSync(uid)
+                // Login and completed sessions already schedule synchronization. Resuming
+                // this screen only reconnects its listeners, never starts a new retry chain.
                 observeRanking(uid).collect { ranking ->
                     if (owner == uid) uiState = uiState.copy(ranking = ranking, loading = false, error = false)
                 }
@@ -49,6 +55,23 @@ class RankingViewModel(
         }
     }
 
-    fun stop() { observation?.cancel(); observation = null }
-    fun retry() { stop(); start() }
+    fun stop() {
+        screenActive = false
+        observation?.cancel()
+        observation = null
+    }
+
+    fun retry() {
+        val uid = owner ?: return
+        if (!screenActive) return
+        val at = monotonic()
+        if (lastSyncRequestAt?.let { at - it < 5_000 } == true) return
+        lastSyncRequestAt = at
+        try {
+            requestXpSync(uid)
+            // Keep a healthy listener. Repeated clicks must not reload the top 50.
+            start()
+        } catch (error: CancellationException) { throw error }
+        catch (error: Exception) { uiState = uiState.copy(loading = false, error = true) }
+    }
 }

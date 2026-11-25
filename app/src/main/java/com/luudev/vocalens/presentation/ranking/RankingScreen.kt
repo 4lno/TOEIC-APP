@@ -12,15 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.luudev.vocalens.R
 import com.luudev.vocalens.presentation.components.pondBackground
 import com.luudev.vocalens.presentation.theme.KoiColors
 
 @Composable
 fun RankingRoute(viewModel: RankingViewModel, onBack: () -> Unit) {
-    DisposableEffect(viewModel) {
+    LifecycleResumeEffect(viewModel, viewModel.uiState.userId) {
         viewModel.start()
-        onDispose { viewModel.stop() }
+        onPauseOrDispose { viewModel.stop() }
     }
     RankingScreen(viewModel.uiState, viewModel::retry, onBack)
 }

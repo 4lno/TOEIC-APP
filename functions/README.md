@@ -9,10 +9,10 @@ Backend tách `domain/` (model, validation, quy tắc XP), `application/` (use c
 ## Luồng XP
 
 1. Khi hoàn thành flashcard, Android lưu XP cá nhân và bản ghi `xp_sync` trong cùng transaction Room.
-2. WorkManager gửi các phiên chờ theo thứ tự thời gian khi có mạng và đúng tài khoản đăng nhập. Đăng nhập, hoàn thành phiên hoặc nút đồng bộ đều có thể lên lịch gửi.
+2. WorkManager gửi các phiên chờ theo thứ tự thời gian khi có mạng và đúng tài khoản đăng nhập. Đăng nhập, hoàn thành phiên hoặc nút đồng bộ đều có thể lên lịch gửi. Mỗi work request chạy tối đa 3 lần (1 lần đầu + tối đa 2 lần thử lại), chỉ tự retry lỗi mạng/dịch vụ tạm thời. Lỗi đăng nhập, thiếu quyền, sai endpoint hoặc lỗi không rõ nguyên nhân dừng worker; các phiên vẫn PENDING để thử lại sau khi sửa nguyên nhân.
 3. Callable `submitFlashcardSession` lấy UID từ Firebase Auth; `ownerId` trong request chỉ để đối chiếu chủ hàng đợi khi đổi tài khoản. Client không được gửi số XP.
 4. Server kiểm tra phiên/review, tự tính 5 XP/thẻ và ghi biên nhận + tổng XP trong transaction. Một `sessionId` chỉ cộng một lần; retry dữ liệu khác bị từ chối. Các phiên trùng thời gian của cùng user bị từ chối, kể cả phiên được gửi từ thiết bị khác.
-5. Android lắng nghe top 50 và tổng XP của chính mình. Cùng XP thì cùng hạng (1, 1, 3); thứ tự trong nhóm đồng điểm ổn định theo UID.
+5. Android lắng nghe top 50 và tổng XP của chính mình chỉ khi màn hình ranking ở trạng thái RESUMED. Pause, chạy nền hoặc rời màn hình sẽ hủy listener; resume chỉ nối lại listener, không tự lên lịch đồng bộ mới. Nút đồng bộ được giới hạn một lần mỗi 5 giây và không tạo lại listener đang hoạt động tốt. Cùng XP thì cùng hạng (1, 1, 3); thứ tự trong nhóm đồng điểm ổn định theo UID.
 
 `leaderboard/{uid}` chỉ chứa `userId`, `displayName`, `totalXp`, `updatedAt`, không chứa email. Tên được lấy từ Firebase Auth. Biên nhận `xpAccounts/{uid}/sessions/{sessionId}` chỉ backend truy cập, lưu hash thay vì toàn bộ từ đã học.
 
@@ -83,7 +83,7 @@ Deploy rules sẽ thay rules mặc định chặn toàn bộ bằng rules trong 
 ## Giới hạn và vận hành
 
 - Payload một phiên: 1–5000 từ khác nhau, rating hợp lệ, thời gian tăng hợp lệ, phiên tối đa 24 giờ, không quá 5 phút trong tương lai. Server chấp nhận phiên offline cũ nếu không chồng lên phiên đã nhận. Giờ thiết bị sai hoặc phiên không hợp lệ có thể bị từ chối.
-- Phiên bị từ chối vĩnh viễn hiển thị trong màn ranking; lỗi kết nối giữ PENDING để WorkManager thử lại. Không tự xóa phiên chưa gửi hoặc cộng lại XP cá nhân sau khi server trả kết quả.
+- Phiên bị từ chối vĩnh viễn hiển thị trong màn ranking; lỗi kết nối giữ PENDING để WorkManager thử lại trong giới hạn trên. Hết số lần tự thử, người dùng có thể chọn đồng bộ sau khi kết nối/cấu hình đã được sửa. Không tự xóa phiên chưa gửi hoặc cộng lại XP cá nhân sau khi server trả kết quả.
 - Backend xác minh cấu trúc/tính nhất quán và chống cộng trùng, chưa chứng minh người dùng thực sự học. Flashcard là tự đánh giá; client bị sửa vẫn có thể tạo các phiên giả hợp lệ. Trước khi dùng XP cho phần thưởng có giá trị, cần cơ chế phiên do server cấp, hạn mức và kiểm tra lạm dụng.
 - App Check chưa bật cưỡng chế (`enforce_app_check=False`) để chưa chặn app hiện tại. Trước khi public, cấu hình Play Integrity/App Check cho Android rồi bật enforcement và kiểm thử lại.
 - Giới hạn 5 function instances giúp kiểm soát tải, không phải hạn mức chi phí. Theo dõi usage và đặt cảnh báo ngân sách khi bật Blaze.
